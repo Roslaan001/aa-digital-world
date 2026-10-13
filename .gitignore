@@ -2,3 +2,4 @@
 # uses the curated copies under public/assets.
 assets/*.jpeg
 WhatsApp Unknown *.zip
+worker/node_modules/
