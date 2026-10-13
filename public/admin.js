@@ -133,6 +133,8 @@ function editProduct(product) {
 
 async function openAdmin() {
   try {
+    const health = await api("/api/health");
+    if (!health.ok) throw new Error("The catalog service is unavailable.");
     inventory = await api("/api/admin/products");
     loginPanel.hidden = true;
     adminPanel.hidden = false;
@@ -141,7 +143,13 @@ async function openAdmin() {
   } catch (error) {
     clearSession();
     if (error.message.includes("Sign in") || error.message.includes("session has expired")) return;
-    showMessage(error.message, "error");
+    loginPanel.hidden = true;
+    adminPanel.hidden = true;
+    logoutButton.hidden = true;
+    const message = location.hostname.endsWith(".github.io")
+      ? "Catalog administration is only available on the Cloudflare Pages site. This static GitHub Pages copy cannot sign in or upload products."
+      : "Catalog administration is not ready on this site. Check the Pages Function and R2 setup, then redeploy.";
+    showMessage(message, "error");
   }
 }
 
