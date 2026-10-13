@@ -2,3 +2,27 @@
 @media(min-width:851px){.login-panel{display:grid;grid-template-columns:1fr 1fr;align-items:center;gap:35px;max-width:760px}.login-panel h2{margin:10px 0;font:700 23px "Manrope",sans-serif}.login-panel p{color:#72766d;font-size:12px;line-height:1.65}}
 /* Keep hidden panels hidden even when layout classes set display. */
 [hidden]{display:none!important}
+/* Keep admin controls comfortable to read and tap. */
+.header-actions{font-size:13px}
+.page-intro p,.inventory-help{font-size:15px}
+.eyebrow{font-size:11px}
+.notice{font-size:14px}
+.form-heading h2{font-size:22px}
+.form-grid label{font-size:14px}
+.form-grid input:not([type=checkbox]),.form-grid select,.form-grid textarea{font-size:15px;padding:12px}
+.form-grid small{font-size:12px}
+.button,.quiet-button,.inventory-actions button{font-size:13px}
+.inventory-copy strong{font-size:13px}
+.inventory-copy small{font-size:11px}
+.inventory-actions button{font-size:11px}
+.empty-list{font-size:13px}
+.image-preview{font-size:12px}
+.setup-steps p{font-size:14px}
+.setup-steps pre{font-size:13px}
+footer{font-size:12px}
+@media(max-width:560px){
+  .header-actions{font-size:12px}
+  .page-intro p,.inventory-help{font-size:14px}
+  .form-grid label{font-size:13px}
+  .form-grid small{font-size:12px}
+}
