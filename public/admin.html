@@ -37,7 +37,7 @@
         <input id="product-id" type="hidden">
         <div class="form-grid two-col">
           <label>Product name<input id="product-name" maxlength="90" placeholder="e.g. 20W USB-C charger" required></label>
-          <label>Category<select id="product-category" required><option value="charging">Charging</option><option value="cables">Cables</option><option value="accessories">Accessories & gadgets</option></select></label>
+          <label>Category<input id="product-category" list="category-options" maxlength="40" placeholder="e.g. Phone cases" required><datalist id="category-options"><option value="Charging"><option value="Cables"><option value="Accessories"></datalist></label>
           <label class="wide">Description<textarea id="product-detail" maxlength="180" rows="3" placeholder="A short description customers will see" required></textarea></label>
           <label>Price (₦)<input id="product-price" type="number" min="0" step="50" placeholder="Optional; blank hides the price"></label>
           <label>Stock quantity<input id="product-stock" type="number" min="0" step="1" placeholder="Optional; blank if not tracked"><small>Use 0 when sold out. Leave blank if you are not tracking quantity.</small></label>

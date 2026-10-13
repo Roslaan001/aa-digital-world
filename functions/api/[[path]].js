@@ -5,7 +5,7 @@ const IMAGE_TYPES = new Map([
   ["image/png", "png"],
   ["image/webp", "webp"]
 ]);
-const CATEGORIES = new Set(["charging", "cables", "accessories"]);
+const STANDARD_CATEGORIES = new Map([["charging", "Charging"], ["cables", "Cables"], ["accessories", "Accessories"]]);
 const SESSION_COOKIE = "aa-admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
 const OLD_STARTER_PRODUCTS = new Map([
@@ -258,18 +258,22 @@ async function deleteImage(rawKey, env) {
 function normalizeProduct(body, imageUrl) {
   const name = String(body.name || "").trim();
   const detail = String(body.detail || "").trim();
-  const category = String(body.category || "");
+  const rawCategory = String(body.category_name || body.category || "").trim().replace(/\s+/g, " ");
+  const category = rawCategory.toLowerCase().replace(/&/g, " and ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  const categoryName = STANDARD_CATEGORIES.get(category) || rawCategory;
   const price = body.price_ngn === "" || body.price_ngn == null ? null : Number(body.price_ngn);
   const stock = body.stock_quantity === "" || body.stock_quantity == null ? null : Number(body.stock_quantity);
   imageUrl = typeof imageUrl === "string" ? imageUrl.trim() : imageUrl;
   if (name.length < 2 || name.length > 90) throw httpError("Product name must be 2–90 characters.", 400);
-  if (!CATEGORIES.has(category)) throw httpError("Choose a valid category.", 400);
+  if (rawCategory.length < 2 || rawCategory.length > 40 || !category || category.length > 50) {
+    throw httpError("Enter a category between 2 and 40 characters.", 400);
+  }
   if (detail.length < 2 || detail.length > 180) throw httpError("Description must be 2–180 characters.", 400);
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw httpError("Enter a valid price in naira.", 400);
   if (stock !== null && (!Number.isInteger(stock) || stock < 0)) throw httpError("Stock quantity must be zero or more.", 400);
   if (!imageUrl || typeof imageUrl !== "string" || imageUrl.length > 500) throw httpError("Upload a valid product photo first.", 400);
   return {
-    name, category, tag: String(body.tag || ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[category]), detail,
+    name, category, category_name: categoryName, tag: String(body.tag || STANDARD_CATEGORIES.get(category) || categoryName), detail,
     sku: String(body.sku || "").trim() || null,
     brand: String(body.brand || "").trim() || null,
     compatibility: String(body.compatibility || "").trim() || null,

@@ -42,7 +42,11 @@ function displayPrice(value) {
 }
 
 function categoryName(value) {
-  return ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[value] || "Accessories";
+  return ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[value] || String(value || "Other").replace(/-/g, " ").replace(/\b\w/g, character => character.toUpperCase());
+}
+
+function categoryLabel(product) {
+  return product.category_name || categoryName(product.category);
 }
 
 function clearSession() {
@@ -55,6 +59,14 @@ function drawInventory() {
   inventoryList.replaceChildren();
   document.querySelector("#product-count").textContent = inventory.length;
   document.querySelector("#inventory-empty").hidden = inventory.length > 0;
+  const categoryOptions = document.querySelector("#category-options");
+  const categoryValues = new Set(["Charging", "Cables", "Accessories"]);
+  for (const product of inventory) categoryValues.add(categoryLabel(product));
+  categoryOptions.replaceChildren(...[...categoryValues].map(value => {
+    const option = document.createElement("option");
+    option.value = value;
+    return option;
+  }));
   for (const product of inventory) {
     const row = document.createElement("article");
     row.className = "inventory-item";
@@ -70,7 +82,7 @@ function drawInventory() {
     const published = Boolean(product.is_published);
     const stock = product.stock_quantity == null ? "Stock not tracked" : product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : "Out of stock";
     const availability = product.is_available === false ? "Unavailable" : "Available";
-    info.textContent = `${categoryName(product.category)} · ${displayPrice(product.price_ngn)} · ${stock} · ${availability} · ${published ? "Published" : "Hidden"}`;
+    info.textContent = `${categoryLabel(product)} · ${displayPrice(product.price_ngn)} · ${stock} · ${availability} · ${published ? "Published" : "Hidden"}`;
     copy.append(name, info);
     const actions = document.createElement("div");
     actions.className = "inventory-actions";
@@ -121,7 +133,7 @@ function clearForm() {
 function editProduct(product) {
   document.querySelector("#product-id").value = product.id;
   document.querySelector("#product-name").value = product.name;
-  document.querySelector("#product-category").value = product.category;
+  document.querySelector("#product-category").value = categoryLabel(product);
   document.querySelector("#product-sku").value = product.sku || "";
   document.querySelector("#product-detail").value = product.detail;
   document.querySelector("#product-price").value = product.price_ngn ?? "";
@@ -204,6 +216,7 @@ productForm.addEventListener("submit", async event => {
     const product = {
       name: document.querySelector("#product-name").value.trim(),
       category: document.querySelector("#product-category").value,
+      category_name: document.querySelector("#product-category").value.trim(),
       sku: document.querySelector("#product-sku").value.trim(),
       detail: document.querySelector("#product-detail").value.trim(),
       price_ngn: document.querySelector("#product-price").value || null,

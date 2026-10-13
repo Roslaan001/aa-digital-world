@@ -20,14 +20,56 @@ function productPrice(value) {
   return `₦${Number(value).toLocaleString("en-NG")}`;
 }
 
+function categoryName(value) {
+  return ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[value]
+    || String(value || "Other").replace(/-/g, " ").replace(/\b\w/g, character => character.toUpperCase());
+}
+
+function refreshCategoryFilters(published) {
+  const filters = document.querySelector(".filters");
+  const categories = new Map();
+  for (const product of published) {
+    const key = product.category;
+    if (!key) continue;
+    const category = categories.get(key) || { label: product.category_name || categoryName(key), count: 0 };
+    category.count += 1;
+    categories.set(key, category);
+  }
+
+  filters.querySelectorAll("[data-custom-filter]").forEach(button => button.remove());
+  for (const [key, category] of categories) {
+    if (["charging", "cables", "accessories"].includes(key)) continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "filter";
+    button.dataset.filter = key;
+    button.dataset.customFilter = "true";
+    button.setAttribute("aria-pressed", "false");
+    button.append(document.createTextNode(category.label));
+    button.append(document.createElement("span"));
+    filters.append(button);
+  }
+
+  for (const button of filters.querySelectorAll(".filter")) {
+    const count = button.querySelector("span");
+    if (count) count.textContent = button.dataset.filter === "all"
+      ? published.length
+      : categories.get(button.dataset.filter)?.count || 0;
+  }
+  if (activeFilter !== "all" && !categories.has(activeFilter)) activeFilter = "all";
+  for (const button of filters.querySelectorAll(".filter")) {
+    const active = button.dataset.filter === activeFilter;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
 function render() {
   const term = search.value.trim().toLowerCase();
   const published = products.filter(product => product.is_published !== false && product.is_published !== 0);
+  refreshCategoryFilters(published);
   const visible = published.filter(product => (activeFilter === "all" || product.category === activeFilter) && `${product.name} ${product.detail} ${product.tag || ""}`.toLowerCase().includes(term));
   document.querySelector("#all-count").textContent = published.length;
-  for (const category of ["charging", "cables", "accessories"]) {
-    document.querySelector(`#${category}-count`).textContent = published.filter(product => product.category === category).length;
-  }
   grid.innerHTML = visible.map((product, index) => {
     const outOfStock = product.stock_quantity !== null && product.stock_quantity !== undefined && Number(product.stock_quantity) <= 0;
     const available = product.is_available !== false && !outOfStock;
@@ -48,15 +90,12 @@ function render() {
   empty.hidden = visible.length > 0;
 }
 
-document.querySelectorAll(".filter").forEach(button => button.addEventListener("click", () => {
-  const previous = document.querySelector(".filter.active");
-  previous.classList.remove("active");
-  previous.setAttribute("aria-pressed", "false");
-  button.classList.add("active");
-  button.setAttribute("aria-pressed", "true");
+document.querySelector(".filters").addEventListener("click", event => {
+  const button = event.target.closest(".filter");
+  if (!button) return;
   activeFilter = button.dataset.filter;
   render();
-}));
+});
 search.addEventListener("input", render);
 document.addEventListener("keydown", event => {
   if (event.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
