@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow"><title>Admin setup — AA Digital World</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="admin-header"><a class="brand" href="index.html"><span class="brand-mark">AA<span>.</span></span><span class="brand-name">DIGITAL<br>WORLD</span></a><div class="header-actions"><a href="admin.html">Back to admin ↗</a><a href="index.html">View storefront</a></div></header>
+  <main class="admin-main setup-main">
+    <div class="page-intro"><div class="eyebrow"><span></span> ONE-TIME SETUP</div><h1>Connect your <em>catalog.</em></h1><p>R2 stores product photos, D1 stores product details, and a Cloudflare Worker safely handles admin access and uploads. GitHub Pages continues to host the customer storefront.</p></div>
+    <section class="panel setup-steps">
+      <h2>1. Prepare a Cloudflare account</h2><p>Sign in at <a href="https://dash.cloudflare.com/" target="_blank" rel="noopener">dash.cloudflare.com ↗</a>. R2 requires enabling the R2 subscription through Cloudflare’s checkout flow. It has monthly free usage allowances; usage beyond those allowances is billed.</p>
+      <h2>2. Create the D1 database and R2 bucket</h2><p>On your computer, clone <a href="https://github.com/Roslaan001/aa-digital-world" target="_blank" rel="noopener">the website repository ↗</a> and open its <code>worker/</code> folder. Install Wrangler and log in, then create the resources:</p>
+      <pre>npm install
+npx wrangler login
+npx wrangler r2 bucket create aa-digital-world-product-images
+npx wrangler d1 create aa-digital-world-catalog</pre>
+      <p>Copy the D1 <code>database_id</code> Wrangler returns into <code>worker/wrangler.toml</code> where it says <code>REPLACE_WITH_D1_DATABASE_ID</code>. Set <code>ADMIN_EMAIL</code> to the shop owner's login email. The default Pages origin is already configured. If your Pages URL differs, set <code>ALLOWED_ORIGIN</code> to its origin (scheme and hostname only).</p>
+      <h2>3. Set up the catalog database</h2><p>From the <code>worker/</code> folder, apply the schema and starter catalog to the remote database:</p>
+      <pre>npx wrangler d1 migrations apply aa-digital-world-catalog --remote</pre>
+      <h2>4. Set private admin credentials and deploy</h2><p>Choose a unique password at least 16 characters long. Wrangler prompts for each value; don’t add these secrets to the repository:</p>
+      <pre>npx wrangler secret put ADMIN_PASSWORD
+npx wrangler secret put SESSION_SECRET</pre>
+      <p>Use a random value of at least 32 characters for <code>SESSION_SECRET</code>. Deploy the API:</p>
+      <pre>npx wrangler deploy</pre>
+      <h2>5. Connect GitHub Pages to the API</h2><p>Wrangler prints the Worker URL (ending in <code>.workers.dev</code>). In <code>public/admin-config.js</code>, set <code>apiBaseUrl</code> to that URL, commit the change to <code>master</code>, and wait for GitHub Pages to finish deploying.</p>
+      <h2>6. Add products</h2><p>Open <a href="admin.html">the admin page ↗</a> and sign in with the configured email and password. Upload a JPG, PNG or WebP photo up to 5 MB, then add the product details. Published products appear on the storefront right away.</p>
+      <p>If you later change the Worker API URL or public Pages origin, update <code>public/admin-config.js</code> or <code>worker/wrangler.toml</code> respectively, then deploy the Worker and push the Pages change.</p>
+      <div class="notice notice-warm setup-warning"><strong>Keep secrets private.</strong><p>Admin password and session secret belong in Wrangler secrets only. The Worker never exposes them to GitHub Pages or the browser.</p></div>
+      <a class="button button-primary" href="admin.html">Open admin page <span>↗</span></a>
+    </section>
+  </main>
+  <footer><span>AA Digital World · Admin setup</span><a href="https://wa.me/2348025816245">Store WhatsApp ↗</a></footer>
+</body>
+</html>

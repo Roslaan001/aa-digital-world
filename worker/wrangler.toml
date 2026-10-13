@@ -1,0 +1,17 @@
+name = "aa-digital-world-api"
+main = "src/index.js"
+compatibility_date = "2026-10-13"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "aa-digital-world-catalog"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[[r2_buckets]]
+binding = "PRODUCT_IMAGES"
+bucket_name = "aa-digital-world-product-images"
+
+[vars]
+ALLOWED_ORIGIN = "https://roslaan001.github.io"
+ADMIN_EMAIL = "REPLACE_WITH_ADMIN_EMAIL"
