@@ -4,8 +4,11 @@ const search = document.querySelector("#product-search");
 const empty = document.querySelector("#empty-state");
 let activeFilter = "all";
 
-function whatsappUrl(name) {
-  return `https://wa.me/2348025816245?text=${encodeURIComponent(`Hi AA Digital World! I'm interested in the ${name}. Is it available? I'd like to order.`)}`;
+function whatsappUrl(name, restock = false) {
+  const message = restock
+    ? `Hi AA Digital World! I'm interested in the ${name}. Please let me know if it is available or when it is back in stock.`
+    : `Hi AA Digital World! I'm interested in the ${name}. Is it available? I'd like to order.`;
+  return `https://wa.me/2348025816245?text=${encodeURIComponent(message)}`;
 }
 
 function escapeHtml(value) {
@@ -25,14 +28,23 @@ function render() {
   for (const category of ["charging", "cables", "accessories"]) {
     document.querySelector(`#${category}-count`).textContent = published.filter(product => product.category === category).length;
   }
-  grid.innerHTML = visible.map((product, index) => `
+  grid.innerHTML = visible.map((product, index) => {
+    const outOfStock = product.stock_quantity !== null && product.stock_quantity !== undefined && Number(product.stock_quantity) <= 0;
+    const available = product.is_available !== false && !outOfStock;
+    const statusMarkup = outOfStock
+      ? '<p class="product-status is-unavailable">Out of stock</p>'
+      : !available ? '<p class="product-status is-unavailable">Currently unavailable</p>' : "";
+    const price = productPrice(product.price_ngn);
+    const link = whatsappUrl(product.name, !available);
+    return `
     <article class="product-card" style="animation-delay:${Math.min(index * 35, 210)}ms">
-      <a class="product-image" href="${whatsappUrl(product.name)}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp">
+      <a class="product-image" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp">
         <img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy">
         <span class="product-tag">${escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories"}[product.category] || "Accessories"))}</span><span class="product-arrow" aria-hidden="true">↗</span>
       </a>
-      <div class="product-info"><div><h3 class="product-title">${escapeHtml(product.name)}</h3><p class="product-description">${escapeHtml(product.detail)}${product.brand ? ` · ${escapeHtml(product.brand)}` : ""}</p>${productPrice(product.price_ngn) ? `<p class="product-price">${productPrice(product.price_ngn)}</p>` : ""}</div><a class="product-order" href="${whatsappUrl(product.name)}" target="_blank" rel="noopener">Order ↗</a></div>
-    </article>`).join("");
+      <div class="product-info"><div><h3 class="product-title">${escapeHtml(product.name)}</h3><p class="product-description">${escapeHtml(product.detail)}${product.brand ? ` · ${escapeHtml(product.brand)}` : ""}</p>${price ? `<p class="product-price">${price}</p>` : ""}${statusMarkup}</div><a class="product-order${available ? "" : " is-unavailable"}" href="${link}" target="_blank" rel="noopener">${available ? "Order ↗" : "Restock info ↗"}</a></div>
+    </article>`;
+  }).join("");
   empty.hidden = visible.length > 0;
 }
 

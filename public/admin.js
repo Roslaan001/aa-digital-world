@@ -68,7 +68,9 @@ function drawInventory() {
     name.textContent = product.name;
     const info = document.createElement("small");
     const published = Boolean(product.is_published);
-    info.textContent = `${categoryName(product.category)} · ${displayPrice(product.price_ngn)} · ${published ? "Published" : "Hidden"}`;
+    const stock = product.stock_quantity == null ? "Stock not tracked" : product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : "Out of stock";
+    const availability = product.is_available === false ? "Unavailable" : "Available";
+    info.textContent = `${categoryName(product.category)} · ${displayPrice(product.price_ngn)} · ${stock} · ${availability} · ${published ? "Published" : "Hidden"}`;
     copy.append(name, info);
     const actions = document.createElement("div");
     actions.className = "inventory-actions";
@@ -104,7 +106,7 @@ function showImagePreview(src, name) {
 function clearForm() {
   productForm.reset();
   document.querySelector("#product-id").value = "";
-  document.querySelector("#product-stock").value = "1";
+  document.querySelector("#product-stock").value = "";
   document.querySelector("#product-available").checked = true;
   document.querySelector("#product-published").checked = true;
   document.querySelector("#form-title").textContent = "Add a product";
@@ -123,7 +125,7 @@ function editProduct(product) {
   document.querySelector("#product-sku").value = product.sku || "";
   document.querySelector("#product-detail").value = product.detail;
   document.querySelector("#product-price").value = product.price_ngn ?? "";
-  document.querySelector("#product-stock").value = product.stock_quantity ?? 0;
+  document.querySelector("#product-stock").value = product.stock_quantity ?? "";
   document.querySelector("#product-brand").value = product.brand || "";
   document.querySelector("#product-compatibility").value = product.compatibility || "";
   document.querySelector("#product-available").checked = Boolean(product.is_available);
@@ -205,7 +207,7 @@ productForm.addEventListener("submit", async event => {
       sku: document.querySelector("#product-sku").value.trim(),
       detail: document.querySelector("#product-detail").value.trim(),
       price_ngn: document.querySelector("#product-price").value || null,
-      stock_quantity: Number(document.querySelector("#product-stock").value),
+      stock_quantity: document.querySelector("#product-stock").value === "" ? null : Number(document.querySelector("#product-stock").value),
       brand: document.querySelector("#product-brand").value.trim(),
       compatibility: document.querySelector("#product-compatibility").value.trim(),
       is_available: document.querySelector("#product-available").checked,
@@ -281,6 +283,49 @@ imageInput.addEventListener("change", () => {
   showImagePreview(selectedPreviewUrl, file.name);
 });
 document.querySelector("#cancel-edit").addEventListener("click", clearForm);
+document.querySelector("#export-catalog").addEventListener("click", () => {
+  const backup = {
+    format: "aa-digital-world-catalog",
+    version: 1,
+    exported_at: new Date().toISOString(),
+    products: inventory
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `aa-digital-world-catalog-${new Date().toISOString().slice(0, 10)}.json`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  showMessage("Catalog backup downloaded.");
+});
+
+document.querySelector("#restore-catalog").addEventListener("change", async event => {
+  const file = event.target.files[0];
+  event.target.value = "";
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) {
+    showMessage("Choose a catalog backup smaller than 5 MB.", "error");
+    return;
+  }
+  try {
+    const backup = JSON.parse(await file.text());
+    if (backup.format !== "aa-digital-world-catalog" || backup.version !== 1 || !Array.isArray(backup.products)) {
+      throw new Error("This is not an AA Digital World catalog backup.");
+    }
+    if (!window.confirm(`Restore ${backup.products.length} products? This replaces the current live catalog.`)) return;
+    const restored = await api("/api/admin/products", { method: "PUT", body: backup });
+    clearForm();
+    inventory = restored;
+    drawInventory();
+    showMessage(`Catalog restored from ${file.name}.`);
+  } catch (error) {
+    showMessage(error.message || "Could not read this backup file.", "error");
+  }
+});
+
 logoutButton.addEventListener("click", async () => {
   try { await api("/api/admin/logout", { method: "POST" }); } catch {}
   inventory = [];

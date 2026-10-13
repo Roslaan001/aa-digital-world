@@ -40,7 +40,7 @@
           <label>Category<select id="product-category" required><option value="charging">Charging</option><option value="cables">Cables</option><option value="accessories">Accessories & gadgets</option></select></label>
           <label class="wide">Description<textarea id="product-detail" maxlength="180" rows="3" placeholder="A short description customers will see" required></textarea></label>
           <label>Price (₦)<input id="product-price" type="number" min="0" step="50" placeholder="Optional; blank hides the price"></label>
-          <label>Stock quantity<input id="product-stock" type="number" min="0" step="1" value="1" required></label>
+          <label>Stock quantity<input id="product-stock" type="number" min="0" step="1" placeholder="Optional; blank if not tracked"><small>Use 0 when sold out. Leave blank if you are not tracking quantity.</small></label>
           <label>Brand<input id="product-brand" maxlength="60" placeholder="Optional"></label>
           <label>Compatible with<input id="product-compatibility" maxlength="100" placeholder="Optional device/model"></label>
           <label>SKU / item code<input id="product-sku" maxlength="50" placeholder="Optional"></label>
@@ -54,7 +54,8 @@
 
       <section class="panel inventory-panel" aria-labelledby="inventory-title">
         <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> LIVE INVENTORY</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
-        <p class="inventory-help">Changes are saved to the live catalog when you save each product.</p>
+        <p class="inventory-help">Changes save to the live catalog. Download backups regularly; backup files include product data and photo links, while photos stay in R2.</p>
+        <div class="inventory-tools"><button id="export-catalog" class="quiet-button" type="button">Download backup</button><label class="quiet-button restore-label">Restore backup<input id="restore-catalog" type="file" accept="application/json,.json" hidden></label></div>
         <div id="inventory-list" class="inventory-list"></div>
         <p id="inventory-empty" class="empty-list" hidden>No products yet. Add the first item using the form.</p>
       </section>

@@ -17,6 +17,8 @@
 .inventory-actions button{font-size:11px}
 .inventory-actions .delete-product{background:#fff0ec;color:#8b2b16}
 .inventory-actions .delete-product:hover{background:#ffe0d6}
+.inventory-actions .delete-product{font-size:11px}
+.restore-label{display:inline-flex;align-items:center;cursor:pointer}
 .empty-list{font-size:13px}
 .image-preview{font-size:12px}
 .setup-steps p{font-size:14px}

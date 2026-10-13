@@ -21,6 +21,8 @@
 .product-tag{font-size:10px}
 .product-title{font-size:15px}
 .product-description{font-size:12px}
+.product-status{font-size:12px;font-weight:700;margin:6px 0 0;color:#62675b}
+.product-status.is-unavailable,.product-order.is-unavailable{color:#8b4b36}
 .product-price,.product-order{font-size:12px}
 .catalog-bottom{font-size:12px}
 .message-banner h2{font-size:30px}
@@ -43,6 +45,7 @@ footer{font-size:12px}
   .search-box input{font-size:14px}
   .product-title{font-size:13px}
   .product-description{font-size:11px}
+  .product-status{font-size:11px}
   .product-price,.product-order{font-size:11px}
   .catalog-bottom{font-size:11px}
   .message-banner h2{font-size:25px}

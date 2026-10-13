@@ -8,6 +8,19 @@ const IMAGE_TYPES = new Map([
 const CATEGORIES = new Set(["charging", "cables", "accessories"]);
 const SESSION_COOKIE = "aa-admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
+const OLD_STARTER_PRODUCTS = new Map([
+  ["starter-01", ["Everyday charging set", "A handy mix of chargers and cables"]],
+  ["starter-02", ["Cable colour collection", "Cable options in a range of colours"]],
+  ["starter-03", ["Phone accessory bundle", "A little bit of everything for your phone"]],
+  ["starter-04", ["Charging & adapter picks", "Adapters and charging accessories"]],
+  ["starter-05", ["Cable & connector mix", "Different cable and connector styles"]],
+  ["starter-06", ["Mobile essentials bundle", "Useful add-ons for your everyday carry"]],
+  ["starter-07", ["Power & charging picks", "Chargers and leads for daily use"]],
+  ["starter-08", ["Cable essentials", "Browse the available cable selection"]],
+  ["starter-09", ["Handy gadget selection", "Small tech finds for home and travel"]],
+  ["starter-10", ["Adapter & audio accessories", "Ask which options work with your device"]],
+  ["starter-11", ["Phone accessories, assorted", "More useful extras in one collection"]]
+]);
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -37,6 +50,7 @@ export async function onRequest(context) {
 
     if (path === "/api/admin/products" && request.method === "GET") return json(await readCatalog(context));
     if (path === "/api/admin/products" && request.method === "POST") return createProduct(request, context);
+    if (path === "/api/admin/products" && request.method === "PUT") return restoreProducts(request, context);
     if (path === "/api/admin/images" && request.method === "POST") return uploadImage(request, env, url);
     if (path.startsWith("/api/admin/images/") && request.method === "DELETE") {
       return deleteImage(path.slice("/api/admin/images/".length), env);
@@ -155,7 +169,7 @@ async function readCatalog(context) {
   if (stored) {
     try {
       const catalog = JSON.parse(await stored.text());
-      if (Array.isArray(catalog)) return catalog;
+      if (Array.isArray(catalog)) return await migrateStarterProducts(catalog, context);
     } catch { throw new Error("The stored catalog is invalid JSON."); }
     throw new Error("The stored catalog is not a product list.");
   }
@@ -168,6 +182,32 @@ async function readCatalog(context) {
   if (!Array.isArray(catalog)) throw new Error("The starter catalog is invalid.");
   await saveCatalog(env, catalog);
   return catalog;
+}
+
+async function migrateStarterProducts(catalog, context) {
+  const candidates = catalog.filter(product => {
+    const old = OLD_STARTER_PRODUCTS.get(product.id);
+    return old && product.name === old[0] && product.detail === old[1]
+      && product.price_ngn == null && product.stock_quantity === 0
+      && !product.sku && !product.brand && !product.compatibility && !product.updated_at
+      && product.is_available === true && product.is_published === true;
+  });
+  if (!candidates.length) return catalog;
+
+  const asset = await context.env.ASSETS.fetch(new Request(new URL("/catalog.json", context.request.url)));
+  if (!asset.ok) return catalog;
+  const seeds = await asset.json();
+  const byId = new Map(seeds.map(product => [product.id, product]));
+  const upgrades = new Map(candidates.map(product => [product.id, byId.get(product.id)]));
+  let changed = false;
+  const migrated = catalog.map(product => {
+    const replacement = upgrades.get(product.id);
+    if (!replacement) return product;
+    changed = true;
+    return { ...replacement, ...(product.created_at ? { created_at: product.created_at } : {}) };
+  });
+  if (changed) await saveCatalog(context.env, migrated);
+  return migrated;
 }
 
 async function saveCatalog(env, catalog) {
@@ -220,13 +260,14 @@ function normalizeProduct(body, imageUrl) {
   const detail = String(body.detail || "").trim();
   const category = String(body.category || "");
   const price = body.price_ngn === "" || body.price_ngn == null ? null : Number(body.price_ngn);
-  const stock = Number(body.stock_quantity);
+  const stock = body.stock_quantity === "" || body.stock_quantity == null ? null : Number(body.stock_quantity);
+  imageUrl = typeof imageUrl === "string" ? imageUrl.trim() : imageUrl;
   if (name.length < 2 || name.length > 90) throw httpError("Product name must be 2–90 characters.", 400);
   if (!CATEGORIES.has(category)) throw httpError("Choose a valid category.", 400);
   if (detail.length < 2 || detail.length > 180) throw httpError("Description must be 2–180 characters.", 400);
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw httpError("Enter a valid price in naira.", 400);
-  if (!Number.isInteger(stock) || stock < 0) throw httpError("Stock quantity must be zero or more.", 400);
-  if (!imageUrl || typeof imageUrl !== "string") throw httpError("Upload a product photo first.", 400);
+  if (stock !== null && (!Number.isInteger(stock) || stock < 0)) throw httpError("Stock quantity must be zero or more.", 400);
+  if (!imageUrl || typeof imageUrl !== "string" || imageUrl.length > 500) throw httpError("Upload a valid product photo first.", 400);
   return {
     name, category, tag: String(body.tag || ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[category]), detail,
     sku: String(body.sku || "").trim() || null,
@@ -266,6 +307,36 @@ async function updateProduct(request, id, context) {
   catalog[index] = product;
   await saveCatalog(context.env, catalog);
   return json(product);
+}
+
+async function restoreProducts(request, context) {
+  const backup = await request.json();
+  if (backup?.format !== "aa-digital-world-catalog" || backup.version !== 1 || !Array.isArray(backup.products)) {
+    throw httpError("This is not a supported AA Digital World catalog backup.", 400);
+  }
+  if (backup.products.length > 500) throw httpError("A catalog backup can contain up to 500 products.", 400);
+  const ids = new Set();
+  const skus = new Set();
+  const catalog = backup.products.map(item => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw httpError("The backup contains an invalid product record.", 400);
+    const id = String(item?.id || "");
+    if (!/^[a-zA-Z0-9-]{1,80}$/.test(id) || ids.has(id)) throw httpError("The backup has an invalid or repeated product ID.", 400);
+    ids.add(id);
+    const values = normalizeProduct(item, item.image_url);
+    if (values.sku) {
+      const sku = values.sku.toLowerCase();
+      if (skus.has(sku)) throw httpError("The backup has repeated item codes.", 400);
+      skus.add(sku);
+    }
+    return {
+      id,
+      ...values,
+      created_at: typeof item.created_at === "string" ? item.created_at : new Date().toISOString(),
+      ...(typeof item.updated_at === "string" ? { updated_at: item.updated_at } : {})
+    };
+  });
+  await saveCatalog(context.env, catalog);
+  return json(catalog);
 }
 
 async function deleteProduct(id, context, url) {
