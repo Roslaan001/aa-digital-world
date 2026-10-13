@@ -5,7 +5,7 @@ const empty = document.querySelector("#empty-state");
 let activeFilter = "all";
 
 function whatsappUrl(name) {
-  return `https://wa.me/2348025816245?text=${encodeURIComponent(`Hi AA Digital World! I'm interested in the ${name}. Is it available, and what is the price?`)}`;
+  return `https://wa.me/2348025816245?text=${encodeURIComponent(`Hi AA Digital World! I'm interested in the ${name}. Is it available? I'd like to order.`)}`;
 }
 
 function escapeHtml(value) {
@@ -13,7 +13,7 @@ function escapeHtml(value) {
 }
 
 function productPrice(value) {
-  if (value === null || value === undefined || value === "") return "Ask for price";
+  if (value === null || value === undefined || value === "") return "";
   return `₦${Number(value).toLocaleString("en-NG")}`;
 }
 
@@ -31,7 +31,7 @@ function render() {
         <img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy">
         <span class="product-tag">${escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories"}[product.category] || "Accessories"))}</span><span class="product-arrow" aria-hidden="true">↗</span>
       </a>
-      <div class="product-info"><div><h3 class="product-title">${escapeHtml(product.name)}</h3><p class="product-description">${escapeHtml(product.detail)}${product.brand ? ` · ${escapeHtml(product.brand)}` : ""}</p><p class="product-price">${productPrice(product.price_ngn)}</p></div><a class="product-order" href="${whatsappUrl(product.name)}" target="_blank" rel="noopener">Ask us ↗</a></div>
+      <div class="product-info"><div><h3 class="product-title">${escapeHtml(product.name)}</h3><p class="product-description">${escapeHtml(product.detail)}${product.brand ? ` · ${escapeHtml(product.brand)}` : ""}</p>${productPrice(product.price_ngn) ? `<p class="product-price">${productPrice(product.price_ngn)}</p>` : ""}</div><a class="product-order" href="${whatsappUrl(product.name)}" target="_blank" rel="noopener">Order ↗</a></div>
     </article>`).join("");
   empty.hidden = visible.length > 0;
 }

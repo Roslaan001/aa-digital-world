@@ -37,7 +37,7 @@ async function api(path, { method = "GET", body, raw = false, contentType = "" }
 }
 
 function displayPrice(value) {
-  if (value === null || value === undefined || value === "") return "Ask for price";
+  if (value === null || value === undefined || value === "") return "Price not set";
   return `₦${Number(value).toLocaleString("en-NG")}`;
 }
 
