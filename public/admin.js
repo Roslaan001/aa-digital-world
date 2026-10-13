@@ -83,7 +83,13 @@ function drawInventory() {
     publish.className = published ? "" : "is-hidden";
     publish.dataset.action = "publish";
     publish.dataset.id = product.id;
-    actions.append(edit, publish);
+    const remove = document.createElement("button");
+    remove.type = "button";
+    remove.textContent = "Delete";
+    remove.className = "delete-product";
+    remove.dataset.action = "delete";
+    remove.dataset.id = product.id;
+    actions.append(edit, publish, remove);
     row.append(image, copy, actions);
     inventoryList.append(row);
   }
@@ -236,6 +242,21 @@ inventoryList.addEventListener("click", async event => {
   if (!product) return;
   if (button.dataset.action === "edit") {
     editProduct(product);
+    return;
+  }
+  if (button.dataset.action === "delete") {
+    if (!window.confirm(`Delete “${product.name}” from the catalog? This cannot be undone.`)) return;
+    button.disabled = true;
+    try {
+      await api(`/api/admin/products/${encodeURIComponent(product.id)}`, { method: "DELETE" });
+      if (document.querySelector("#product-id").value === product.id) clearForm();
+      inventory = await api("/api/admin/products");
+      drawInventory();
+      showMessage(`“${product.name}” was deleted from the catalog.`);
+    } catch (error) {
+      button.disabled = false;
+      showMessage(error.message, "error");
+    }
     return;
   }
   button.disabled = true;

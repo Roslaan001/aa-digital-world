@@ -43,6 +43,7 @@ export async function onRequest(context) {
     }
     const productMatch = path.match(/^\/api\/admin\/products\/([a-zA-Z0-9-]+)$/);
     if (productMatch && request.method === "PATCH") return updateProduct(request, productMatch[1], context);
+    if (productMatch && request.method === "DELETE") return deleteProduct(productMatch[1], context, url);
     return json({ error: "Not found." }, 404);
   } catch (error) {
     const status = error.status || 500;
@@ -265,6 +266,29 @@ async function updateProduct(request, id, context) {
   catalog[index] = product;
   await saveCatalog(context.env, catalog);
   return json(product);
+}
+
+async function deleteProduct(id, context, url) {
+  const catalog = await readCatalog(context);
+  const index = catalog.findIndex(item => item.id === id);
+  if (index < 0) return json({ error: "Product not found." }, 404);
+  const [product] = catalog.splice(index, 1);
+  await saveCatalog(context.env, catalog);
+
+  let imageUrl;
+  try { imageUrl = new URL(product.image_url, url.origin); }
+  catch { imageUrl = null; }
+  const imagePrefix = "/api/images/";
+  if (imageUrl?.origin === url.origin && imageUrl.pathname.startsWith(imagePrefix)) {
+    let key;
+    try { key = imageUrl.pathname.slice(imagePrefix.length).split("/").map(decodeURIComponent).join("/"); }
+    catch { key = ""; }
+    if (/^products\/[a-f0-9-]+\.(jpg|png|webp)$/i.test(key)
+      && !catalog.some(item => item.image_url === product.image_url)) {
+      await context.env.PRODUCT_IMAGES.delete(key);
+    }
+  }
+  return new Response(null, { status: 204 });
 }
 
 function httpError(message, status) {
