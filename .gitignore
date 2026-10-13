@@ -1,0 +1,4 @@
+# The original supplied images and ZIP stay in the working folder; the site
+# uses the curated copies under public/assets.
+assets/*.jpeg
+WhatsApp Unknown *.zip
