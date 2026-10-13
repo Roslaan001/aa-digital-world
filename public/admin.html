@@ -18,7 +18,7 @@
   </header>
 
   <main class="admin-main">
-    <div class="page-intro"><div class="eyebrow"><span></span> STORE MANAGEMENT</div><h1>Your <em>catalog.</em></h1><p>Add products, update availability and upload product photos. Changes appear in the public catalog after saving.</p></div>
+    <div class="page-intro"><div class="eyebrow"><span></span> STORE MANAGEMENT</div><h1>Your <em>catalog.</em></h1><p>Add products, update availability and upload product photos or videos. Changes appear in the public catalog after saving.</p></div>
 
     <div id="status-message" class="notice" role="status" aria-live="polite" hidden></div>
 
@@ -46,6 +46,8 @@
           <label>SKU / item code<input id="product-sku" maxlength="50" placeholder="Optional"></label>
           <label class="wide">Product photo<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 5 MB. Photos upload securely to the store.</small></label>
           <div class="image-preview wide" id="image-preview" hidden><img id="preview-image" alt="Selected product preview"><span id="preview-name"></span></div>
+          <label class="wide">Product video (optional)<input id="product-video" type="file" accept="video/mp4,video/webm"><small>MP4 or WebM, up to 25 MB. A video is shown on the product card in place of its photo.</small></label>
+          <div class="video-preview wide" id="video-preview" hidden><video id="preview-video" controls playsinline preload="metadata"></video><div class="video-preview-actions"><span id="video-preview-name"></span><button id="remove-video" class="quiet-button" type="button">Remove video</button></div></div>
           <label class="check-row"><input id="product-available" type="checkbox" checked> Available to order</label>
           <label class="check-row"><input id="product-published" type="checkbox" checked> Show in public catalog</label>
         </div>
@@ -54,7 +56,7 @@
 
       <section class="panel inventory-panel" aria-labelledby="inventory-title">
         <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> LIVE INVENTORY</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
-        <p class="inventory-help">Changes save to the live catalog. Download backups regularly; backup files include product data and photo links, while photos stay in R2.</p>
+        <p class="inventory-help">Changes save to the live catalog. Download backups regularly; backup files include product data and media links, while photos and videos stay in R2.</p>
         <div class="inventory-tools"><button id="export-catalog" class="quiet-button" type="button">Download backup</button><label class="quiet-button restore-label">Restore backup<input id="restore-catalog" type="file" accept="application/json,.json" hidden></label></div>
         <div id="inventory-list" class="inventory-list"></div>
         <p id="inventory-empty" class="empty-list" hidden>No products yet. Add the first item using the form.</p>

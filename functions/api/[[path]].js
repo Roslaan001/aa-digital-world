@@ -1,10 +1,12 @@
 const CATALOG_KEY = "catalog.json";
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
 const IMAGE_TYPES = new Map([
   ["image/jpeg", "jpg"],
   ["image/png", "png"],
   ["image/webp", "webp"]
 ]);
+const VIDEO_TYPES = new Map([["video/mp4", "mp4"], ["video/webm", "webm"]]);
 const STANDARD_CATEGORIES = new Map([["charging", "Charging"], ["cables", "Cables"], ["accessories", "Accessories"]]);
 const SESSION_COOKIE = "aa-admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
@@ -37,6 +39,9 @@ export async function onRequest(context) {
     if (request.method === "GET" && path.startsWith("/api/images/")) {
       return serveImage(path.slice("/api/images/".length), env);
     }
+    if ((request.method === "GET" || request.method === "HEAD") && path.startsWith("/api/videos/")) {
+      return serveVideo(path.slice("/api/videos/".length), request, env);
+    }
     if (path === "/api/admin/login" && request.method === "POST") return login(request, env, url);
     if (path === "/api/admin/logout" && request.method === "POST") {
       await requireAdmin(request, env);
@@ -54,6 +59,10 @@ export async function onRequest(context) {
     if (path === "/api/admin/images" && request.method === "POST") return uploadImage(request, env, url);
     if (path.startsWith("/api/admin/images/") && request.method === "DELETE") {
       return deleteImage(path.slice("/api/admin/images/".length), env);
+    }
+    if (path === "/api/admin/videos" && request.method === "POST") return uploadVideo(request, env);
+    if (path.startsWith("/api/admin/videos/") && request.method === "DELETE") {
+      return deleteVideo(path.slice("/api/admin/videos/".length), env);
     }
     const productMatch = path.match(/^\/api\/admin\/products\/([a-zA-Z0-9-]+)$/);
     if (productMatch && request.method === "PATCH") return updateProduct(request, productMatch[1], context);
@@ -231,6 +240,30 @@ async function serveImage(rawKey, env) {
   return new Response(object.body, { headers });
 }
 
+async function serveVideo(rawKey, request, env) {
+  let key;
+  try { key = rawKey.split("/").map(decodeURIComponent).join("/"); }
+  catch { return json({ error: "Video not found." }, 404); }
+  if (!/^videos\/[a-f0-9-]+\.(mp4|webm)$/i.test(key)) return json({ error: "Video not found." }, 404);
+  const object = request.method === "HEAD"
+    ? await env.PRODUCT_IMAGES.head(key)
+    : await env.PRODUCT_IMAGES.get(key, request.headers.has("Range") ? { range: request.headers } : undefined);
+  if (!object) return json({ error: "Video not found." }, 404);
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set("Content-Type", object.httpMetadata?.contentType || (key.endsWith(".webm") ? "video/webm" : "video/mp4"));
+  headers.set("Cache-Control", "public, max-age=31536000, immutable");
+  headers.set("Accept-Ranges", "bytes");
+  headers.set("Content-Length", String(object.range?.length ?? object.size));
+  headers.set("ETag", object.httpEtag);
+  headers.set("X-Content-Type-Options", "nosniff");
+  if (object.range) {
+    headers.set("Content-Range", `bytes ${object.range.offset}-${object.range.offset + object.range.length - 1}/${object.size}`);
+  }
+  const status = object.range ? 206 : 200;
+  return new Response(request.method === "HEAD" ? null : object.body, { status, headers });
+}
+
 async function uploadImage(request, env, url) {
   const type = (request.headers.get("Content-Type") || "").toLowerCase();
   const extension = IMAGE_TYPES.get(type);
@@ -255,6 +288,30 @@ async function deleteImage(rawKey, env) {
   return new Response(null, { status: 204 });
 }
 
+async function uploadVideo(request, env) {
+  const type = (request.headers.get("Content-Type") || "").toLowerCase();
+  const extension = VIDEO_TYPES.get(type);
+  if (!extension) return json({ error: "Choose an MP4 or WebM video." }, 415);
+  const length = Number(request.headers.get("Content-Length") || 0);
+  if (length > MAX_VIDEO_BYTES) return json({ error: "The video must be 25 MB or smaller." }, 413);
+  const body = await request.arrayBuffer();
+  if (!body.byteLength || body.byteLength > MAX_VIDEO_BYTES) return json({ error: "The video must be between 1 byte and 25 MB." }, 413);
+  const key = `videos/${crypto.randomUUID()}.${extension}`;
+  await env.PRODUCT_IMAGES.put(key, body, {
+    httpMetadata: { contentType: type, cacheControl: "public, max-age=31536000, immutable" }
+  });
+  return json({ key, videoUrl: `/api/videos/${key}` }, 201);
+}
+
+async function deleteVideo(rawKey, env) {
+  let key;
+  try { key = rawKey.split("/").map(decodeURIComponent).join("/"); }
+  catch { return json({ error: "Invalid video path." }, 400); }
+  if (!/^videos\/[a-f0-9-]+\.(mp4|webm)$/i.test(key)) return json({ error: "Invalid video path." }, 400);
+  await env.PRODUCT_IMAGES.delete(key);
+  return new Response(null, { status: 204 });
+}
+
 function normalizeProduct(body, imageUrl) {
   const name = String(body.name || "").trim();
   const detail = String(body.detail || "").trim();
@@ -263,6 +320,7 @@ function normalizeProduct(body, imageUrl) {
   const categoryName = STANDARD_CATEGORIES.get(category) || rawCategory;
   const price = body.price_ngn === "" || body.price_ngn == null ? null : Number(body.price_ngn);
   const stock = body.stock_quantity === "" || body.stock_quantity == null ? null : Number(body.stock_quantity);
+  const videoUrl = body.video_url == null || body.video_url === "" ? null : String(body.video_url).trim();
   imageUrl = typeof imageUrl === "string" ? imageUrl.trim() : imageUrl;
   if (name.length < 2 || name.length > 90) throw httpError("Product name must be 2–90 characters.", 400);
   if (rawCategory.length < 2 || rawCategory.length > 40 || !category || category.length > 50) {
@@ -272,6 +330,7 @@ function normalizeProduct(body, imageUrl) {
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw httpError("Enter a valid price in naira.", 400);
   if (stock !== null && (!Number.isInteger(stock) || stock < 0)) throw httpError("Stock quantity must be zero or more.", 400);
   if (!imageUrl || typeof imageUrl !== "string" || imageUrl.length > 500) throw httpError("Upload a valid product photo first.", 400);
+  if (videoUrl && !/^\/api\/videos\/videos\/[a-f0-9-]+\.(mp4|webm)$/i.test(videoUrl)) throw httpError("Upload a valid MP4 or WebM product video.", 400);
   return {
     name, category, category_name: categoryName, tag: String(body.tag || STANDARD_CATEGORIES.get(category) || categoryName), detail,
     sku: String(body.sku || "").trim() || null,
@@ -281,7 +340,8 @@ function normalizeProduct(body, imageUrl) {
     stock_quantity: stock,
     is_available: Boolean(body.is_available),
     is_published: Boolean(body.is_published),
-    image_url: imageUrl
+    image_url: imageUrl,
+    video_url: videoUrl
   };
 }
 
@@ -303,7 +363,10 @@ async function updateProduct(request, id, context) {
   const catalog = await readCatalog(context);
   const index = catalog.findIndex(item => item.id === id);
   if (index < 0) return json({ error: "Product not found." }, 404);
-  const values = normalizeProduct(body, body.image_url || catalog[index].image_url);
+  const values = normalizeProduct({
+    ...body,
+    video_url: Object.hasOwn(body, "video_url") ? body.video_url : catalog[index].video_url
+  }, body.image_url || catalog[index].image_url);
   if (values.sku && catalog.some((item, itemIndex) => itemIndex !== index && item.sku && item.sku.toLowerCase() === values.sku.toLowerCase())) {
     throw httpError("That item code is already in use.", 409);
   }
@@ -363,7 +426,20 @@ async function deleteProduct(id, context, url) {
       await context.env.PRODUCT_IMAGES.delete(key);
     }
   }
+  const videoKey = storedVideoKey(product.video_url, url.origin);
+  if (videoKey && !catalog.some(item => item.video_url === product.video_url)) {
+    await context.env.PRODUCT_IMAGES.delete(videoKey);
+  }
   return new Response(null, { status: 204 });
+}
+
+function storedVideoKey(value, origin) {
+  try {
+    const videoUrl = new URL(value, origin);
+    if (videoUrl.origin !== origin || !videoUrl.pathname.startsWith("/api/videos/")) return null;
+    const key = videoUrl.pathname.slice("/api/videos/".length).split("/").map(decodeURIComponent).join("/");
+    return /^videos\/[a-f0-9-]+\.(mp4|webm)$/i.test(key) ? key : null;
+  } catch { return null; }
 }
 
 function httpError(message, status) {

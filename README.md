@@ -1,6 +1,6 @@
 # AA Digital World
 
-AA Digital World is a static storefront with a protected catalog admin. The storefront and admin are hosted by Cloudflare Pages. Pages Functions provide the API and sign-in; an R2 bucket stores product photos and `catalog.json`. No D1 database or standalone Worker is required.
+AA Digital World is a static storefront with a protected catalog admin. The storefront and admin are hosted by Cloudflare Pages. Pages Functions provide the API and sign-in; an R2 bucket stores product photos, optional MP4/WebM product videos (up to 25 MB each), and `catalog.json`. No D1 database or standalone Worker is required.
 
 ## Cloudflare Pages setup
 
@@ -19,7 +19,7 @@ Customers browse the public catalog and order by WhatsApp at **+234 802 581 6245
 
 ## Catalog backups
 
-After signing in to the admin page, use **Download backup** to save the current R2 catalog as a JSON file. **Restore backup** replaces the entire live catalog with that file, so confirm the product count and make a fresh backup before restoring. Product photos already stored in R2 are not included in the backup file; the catalog retains their image URLs.
+After signing in to the admin page, use **Download backup** to save the current R2 catalog as a JSON file. **Restore backup** replaces the entire live catalog with that file, so confirm the product count and make a fresh backup before restoring. Product photos and videos already stored in R2 are not included in the backup file; the catalog retains their media URLs.
 
 The checked-in `public/catalog.json` is used only to seed an empty R2 bucket. Once the live catalog exists in R2, editing that starter file does not overwrite live products.
 

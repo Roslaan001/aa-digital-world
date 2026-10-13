@@ -78,12 +78,13 @@ function render() {
       : !available ? '<p class="product-status is-unavailable">Currently unavailable</p>' : "";
     const price = productPrice(product.price_ngn);
     const link = whatsappUrl(product.name, !available);
+    const tag = escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories"}[product.category] || categoryName(product.category)));
+    const mediaMarkup = product.video_url
+      ? `<div class="product-image product-video-frame"><video class="product-video" controls playsinline preload="metadata" poster="${escapeHtml(product.image_url)}" aria-label="Video of ${escapeHtml(product.name)}"><source src="${escapeHtml(product.video_url)}" type="${product.video_url.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4"}"></video><span class="product-tag">${tag}</span></div>`
+      : `<a class="product-image" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp"><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy"><span class="product-tag">${tag}</span><span class="product-arrow" aria-hidden="true">↗</span></a>`;
     return `
     <article class="product-card" style="animation-delay:${Math.min(index * 35, 210)}ms">
-      <a class="product-image" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp">
-        <img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy">
-        <span class="product-tag">${escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories"}[product.category] || "Accessories"))}</span><span class="product-arrow" aria-hidden="true">↗</span>
-      </a>
+      ${mediaMarkup}
       <div class="product-info"><div><h3 class="product-title">${escapeHtml(product.name)}</h3><p class="product-description">${escapeHtml(product.detail)}${product.brand ? ` · ${escapeHtml(product.brand)}` : ""}</p>${price ? `<p class="product-price">${price}</p>` : ""}${statusMarkup}</div><a class="product-order${available ? "" : " is-unavailable"}" href="${link}" target="_blank" rel="noopener">${available ? "Order ↗" : "Restock info ↗"}</a></div>
     </article>`;
   }).join("");

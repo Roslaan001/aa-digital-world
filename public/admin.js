@@ -1,16 +1,22 @@
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const VIDEO_TYPES = new Set(["video/mp4", "video/webm"]);
 const loginPanel = document.querySelector("#login-panel");
 const adminPanel = document.querySelector("#admin-panel");
 const logoutButton = document.querySelector("#logout-button");
 const statusMessage = document.querySelector("#status-message");
 const productForm = document.querySelector("#product-form");
 const imageInput = document.querySelector("#product-image");
+const videoInput = document.querySelector("#product-video");
 const saveButton = document.querySelector("#save-button");
 const inventoryList = document.querySelector("#inventory-list");
 let inventory = [];
 let currentImageUrl = "";
+let currentVideoUrl = "";
+let removeVideoRequested = false;
 let selectedPreviewUrl = "";
+let selectedVideoPreviewUrl = "";
 
 function showMessage(message, type = "success") {
   statusMessage.textContent = message;
@@ -115,6 +121,14 @@ function showImagePreview(src, name) {
   document.querySelector("#image-preview").hidden = false;
 }
 
+function showVideoPreview(src, name) {
+  const video = document.querySelector("#preview-video");
+  video.src = src;
+  video.load();
+  document.querySelector("#video-preview-name").textContent = name;
+  document.querySelector("#video-preview").hidden = false;
+}
+
 function clearForm() {
   productForm.reset();
   document.querySelector("#product-id").value = "";
@@ -124,10 +138,20 @@ function clearForm() {
   document.querySelector("#form-title").textContent = "Add a product";
   document.querySelector("#cancel-edit").hidden = true;
   document.querySelector("#image-preview").hidden = true;
+  document.querySelector("#video-preview").hidden = true;
+  const previewVideo = document.querySelector("#preview-video");
+  previewVideo.pause();
+  previewVideo.removeAttribute("src");
+  previewVideo.load();
   currentImageUrl = "";
+  currentVideoUrl = "";
+  removeVideoRequested = false;
   imageInput.required = true;
+  videoInput.value = "";
   if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
+  if (selectedVideoPreviewUrl) URL.revokeObjectURL(selectedVideoPreviewUrl);
   selectedPreviewUrl = "";
+  selectedVideoPreviewUrl = "";
 }
 
 function editProduct(product) {
@@ -145,9 +169,13 @@ function editProduct(product) {
   document.querySelector("#form-title").textContent = "Edit product";
   document.querySelector("#cancel-edit").hidden = false;
   currentImageUrl = product.image_url;
+  currentVideoUrl = product.video_url || "";
+  removeVideoRequested = false;
   imageInput.required = false;
   imageInput.value = "";
   showImagePreview(product.image_url, "Current photo · choose another to replace it");
+  if (currentVideoUrl) showVideoPreview(currentVideoUrl, "Current product video · choose another to replace it");
+  else document.querySelector("#video-preview").hidden = true;
   document.querySelector("#product-name").focus();
 }
 
@@ -177,6 +205,19 @@ async function uploadImage(file) {
   return api("/api/admin/images", { method: "POST", body: file, raw: true, contentType: file.type });
 }
 
+async function uploadVideo(file) {
+  return api("/api/admin/videos", { method: "POST", body: file, raw: true, contentType: file.type });
+}
+
+async function deleteVideo(videoUrl) {
+  if (!videoUrl) return;
+  const path = new URL(videoUrl, location.origin).pathname;
+  const prefix = "/api/videos/";
+  if (!path.startsWith(prefix)) return;
+  const key = path.slice(prefix.length).split("/").map(encodeURIComponent).join("/");
+  await api(`/api/admin/videos/${key}`, { method: "DELETE" });
+}
+
 document.querySelector("#login-form").addEventListener("submit", async event => {
   event.preventDefault();
   const button = event.submitter;
@@ -203,15 +244,23 @@ productForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!productForm.reportValidity()) return;
   const file = imageInput.files[0];
+  const videoFile = videoInput.files[0];
   if (file && (!IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
     showMessage("Choose a JPG, PNG or WebP photo up to 5 MB.", "error");
     return;
   }
+  if (videoFile && (!VIDEO_TYPES.has(videoFile.type) || videoFile.size > MAX_VIDEO_BYTES)) {
+    showMessage("Choose an MP4 or WebM video up to 25 MB.", "error");
+    return;
+  }
   saveButton.disabled = true;
-  saveButton.textContent = file ? "Uploading photo…" : "Saving product…";
+  saveButton.textContent = file && videoFile ? "Uploading media…" : file ? "Uploading photo…" : videoFile ? "Uploading video…" : "Saving product…";
   let uploaded = null;
+  let uploadedVideo = null;
+  const previousVideoUrl = currentVideoUrl;
   try {
     if (file) uploaded = await uploadImage(file);
+    if (videoFile) uploadedVideo = await uploadVideo(videoFile);
     const id = document.querySelector("#product-id").value;
     const product = {
       name: document.querySelector("#product-name").value.trim(),
@@ -225,7 +274,8 @@ productForm.addEventListener("submit", async event => {
       compatibility: document.querySelector("#product-compatibility").value.trim(),
       is_available: document.querySelector("#product-available").checked,
       is_published: document.querySelector("#product-published").checked,
-      image_url: uploaded?.imageUrl || currentImageUrl
+      image_url: uploaded?.imageUrl || currentImageUrl,
+      video_url: removeVideoRequested ? null : uploadedVideo?.videoUrl || currentVideoUrl || null
     };
     await api(id ? `/api/admin/products/${encodeURIComponent(id)}` : "/api/admin/products", {
       method: id ? "PATCH" : "POST", body: product
@@ -234,6 +284,7 @@ productForm.addEventListener("submit", async event => {
       const oldKey = currentImageUrl.slice("/api/images/".length);
       await api(`/api/admin/images/${oldKey.split("/").map(encodeURIComponent).join("/")}`, { method: "DELETE" }).catch(() => {});
     }
+    if (previousVideoUrl && previousVideoUrl !== product.video_url) await deleteVideo(previousVideoUrl).catch(() => {});
     clearForm();
     inventory = await api("/api/admin/products");
     drawInventory();
@@ -243,6 +294,7 @@ productForm.addEventListener("submit", async event => {
       const encodedKey = uploaded.key.split("/").map(encodeURIComponent).join("/");
       await api(`/api/admin/images/${encodedKey}`, { method: "DELETE" }).catch(() => {});
     }
+    if (uploadedVideo?.key) await deleteVideo(uploadedVideo.videoUrl).catch(() => {});
     showMessage(error.message, "error");
   } finally {
     saveButton.disabled = false;
@@ -294,6 +346,31 @@ imageInput.addEventListener("change", () => {
   if (selectedPreviewUrl) URL.revokeObjectURL(selectedPreviewUrl);
   selectedPreviewUrl = URL.createObjectURL(file);
   showImagePreview(selectedPreviewUrl, file.name);
+});
+videoInput.addEventListener("change", () => {
+  const file = videoInput.files[0];
+  if (!file) return;
+  if (!VIDEO_TYPES.has(file.type) || file.size > MAX_VIDEO_BYTES) {
+    videoInput.value = "";
+    showMessage("Choose an MP4 or WebM video up to 25 MB.", "error");
+    return;
+  }
+  if (selectedVideoPreviewUrl) URL.revokeObjectURL(selectedVideoPreviewUrl);
+  selectedVideoPreviewUrl = URL.createObjectURL(file);
+  removeVideoRequested = false;
+  showVideoPreview(selectedVideoPreviewUrl, file.name);
+});
+document.querySelector("#remove-video").addEventListener("click", () => {
+  const previewVideo = document.querySelector("#preview-video");
+  previewVideo.pause();
+  previewVideo.removeAttribute("src");
+  previewVideo.load();
+  document.querySelector("#video-preview").hidden = true;
+  videoInput.value = "";
+  removeVideoRequested = true;
+  if (selectedVideoPreviewUrl) URL.revokeObjectURL(selectedVideoPreviewUrl);
+  selectedVideoPreviewUrl = "";
+  showMessage("Product video will be removed when you save this item.");
 });
 document.querySelector("#cancel-edit").addEventListener("click", clearForm);
 document.querySelector("#export-catalog").addEventListener("click", () => {

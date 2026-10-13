@@ -23,6 +23,8 @@
 .product-description{font-size:12px}
 .product-status{font-size:12px;font-weight:700;margin:6px 0 0;color:#62675b}
 .product-status.is-unavailable,.product-order.is-unavailable{color:#8b4b36}
+.product-video-frame{display:block}
+.product-video{width:100%;height:100%;object-fit:cover;display:block;background:#eeece6}
 .product-price,.product-order{font-size:12px}
 .catalog-bottom{font-size:12px}
 .message-banner h2{font-size:30px}
