@@ -1,0 +1,7 @@
+name = "aa-digital-world"
+compatibility_date = "2026-10-13"
+pages_build_output_dir = "./public"
+
+[[r2_buckets]]
+binding = "PRODUCT_IMAGES"
+bucket_name = "aa-digital-world-product-images"

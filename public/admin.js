@@ -1,5 +1,8 @@
-const MAX_IMAGE_BYTES = 2 * 1024 * 1024;
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+const loginPanel = document.querySelector("#login-panel");
+const adminPanel = document.querySelector("#admin-panel");
+const logoutButton = document.querySelector("#logout-button");
 const statusMessage = document.querySelector("#status-message");
 const productForm = document.querySelector("#product-form");
 const imageInput = document.querySelector("#product-image");
@@ -13,6 +16,24 @@ function showMessage(message, type = "success") {
   statusMessage.textContent = message;
   statusMessage.className = `notice notice-${type}`;
   statusMessage.hidden = false;
+  window.clearTimeout(showMessage.timeout);
+  showMessage.timeout = window.setTimeout(() => { statusMessage.hidden = true; }, 6500);
+}
+
+async function api(path, { method = "GET", body, raw = false, contentType = "" } = {}) {
+  const headers = {};
+  if (body && !raw) headers["Content-Type"] = "application/json";
+  if (raw && contentType) headers["Content-Type"] = contentType;
+  const response = await fetch(path, {
+    method,
+    headers,
+    body: body ? (raw ? body : JSON.stringify(body)) : undefined,
+    credentials: "same-origin"
+  });
+  if (response.status === 204) return null;
+  const result = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(result.error || `Request failed (${response.status}).`);
+  return result;
 }
 
 function displayPrice(value) {
@@ -22,6 +43,12 @@ function displayPrice(value) {
 
 function categoryName(value) {
   return ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[value] || "Accessories";
+}
+
+function clearSession() {
+  adminPanel.hidden = true;
+  logoutButton.hidden = true;
+  loginPanel.hidden = false;
 }
 
 function drawInventory() {
@@ -40,7 +67,7 @@ function drawInventory() {
     const name = document.createElement("strong");
     name.textContent = product.name;
     const info = document.createElement("small");
-    const published = product.is_published !== false && product.is_published !== 0;
+    const published = Boolean(product.is_published);
     info.textContent = `${categoryName(product.category)} · ${displayPrice(product.price_ngn)} · ${published ? "Published" : "Hidden"}`;
     copy.append(name, info);
     const actions = document.createElement("div");
@@ -93,8 +120,8 @@ function editProduct(product) {
   document.querySelector("#product-stock").value = product.stock_quantity ?? 0;
   document.querySelector("#product-brand").value = product.brand || "";
   document.querySelector("#product-compatibility").value = product.compatibility || "";
-  document.querySelector("#product-available").checked = product.is_available !== false && product.is_available !== 0;
-  document.querySelector("#product-published").checked = product.is_published !== false && product.is_published !== 0;
+  document.querySelector("#product-available").checked = Boolean(product.is_available);
+  document.querySelector("#product-published").checked = Boolean(product.is_published);
   document.querySelector("#form-title").textContent = "Edit product";
   document.querySelector("#cancel-edit").hidden = false;
   currentImageUrl = product.image_url;
@@ -104,87 +131,97 @@ function editProduct(product) {
   document.querySelector("#product-name").focus();
 }
 
-function readImage(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.addEventListener("load", () => resolve(reader.result), { once: true });
-    reader.addEventListener("error", () => reject(new Error("Could not read that photo.")), { once: true });
-    reader.readAsDataURL(file);
-  });
-}
-
-async function loadCatalog(confirmDiscard = true) {
-  if (confirmDiscard && !window.confirm("Reload the published catalog? Any edits in this tab will be lost.")) return;
+async function openAdmin() {
   try {
-    const response = await fetch(`catalog.json?reload=${Date.now()}`, { headers: { Accept: "application/json" }, cache: "no-store" });
-    if (!response.ok) throw new Error("The published catalog could not be loaded.");
-    const data = await response.json();
-    if (!Array.isArray(data)) throw new Error("The published catalog file is not a valid product list.");
-    inventory = data;
-    clearForm();
+    inventory = await api("/api/admin/products");
+    loginPanel.hidden = true;
+    adminPanel.hidden = false;
+    logoutButton.hidden = false;
     drawInventory();
-    showMessage("Loaded the published catalog. Your edits are only a draft until you download and publish the file.");
   } catch (error) {
+    clearSession();
+    if (error.message.includes("Sign in") || error.message.includes("session has expired")) return;
     showMessage(error.message, "error");
   }
 }
 
-function exportCatalog() {
-  const blob = new Blob([`${JSON.stringify(inventory, null, 2)}\n`], { type: "application/json;charset=utf-8" });
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = "catalog.json";
-  document.body.append(link);
-  link.click();
-  link.remove();
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  showMessage("Downloaded catalog.json. Replace public/catalog.json in GitHub to publish these changes.");
+async function uploadImage(file) {
+  return api("/api/admin/images", { method: "POST", body: file, raw: true, contentType: file.type });
 }
+
+document.querySelector("#login-form").addEventListener("submit", async event => {
+  event.preventDefault();
+  const button = event.submitter;
+  button.disabled = true;
+  try {
+    const result = await api("/api/admin/login", {
+      method: "POST",
+      body: {
+        email: document.querySelector("#login-email").value.trim(),
+        password: document.querySelector("#login-password").value
+      }
+    });
+    document.querySelector("#login-password").value = "";
+    await openAdmin();
+    if (!adminPanel.hidden) showMessage(`Signed in as ${result.email}.`);
+  } catch (error) {
+    showMessage(error.message, "error");
+  } finally {
+    button.disabled = false;
+  }
+});
 
 productForm.addEventListener("submit", async event => {
   event.preventDefault();
   if (!productForm.reportValidity()) return;
   const file = imageInput.files[0];
   if (file && (!IMAGE_TYPES.has(file.type) || file.size > MAX_IMAGE_BYTES)) {
-    showMessage("Choose a JPG, PNG or WebP photo up to 2 MB.", "error");
+    showMessage("Choose a JPG, PNG or WebP photo up to 5 MB.", "error");
     return;
   }
   saveButton.disabled = true;
-  saveButton.textContent = file ? "Reading photo…" : "Saving draft…";
+  saveButton.textContent = file ? "Uploading photo…" : "Saving product…";
+  let uploaded = null;
   try {
+    if (file) uploaded = await uploadImage(file);
     const id = document.querySelector("#product-id").value;
-    const existing = inventory.find(product => product.id === id);
     const product = {
-      id: id || (crypto.randomUUID ? crypto.randomUUID() : `product-${Date.now()}`),
       name: document.querySelector("#product-name").value.trim(),
       category: document.querySelector("#product-category").value,
-      tag: categoryName(document.querySelector("#product-category").value),
-      sku: document.querySelector("#product-sku").value.trim() || null,
+      sku: document.querySelector("#product-sku").value.trim(),
       detail: document.querySelector("#product-detail").value.trim(),
-      brand: document.querySelector("#product-brand").value.trim() || null,
-      compatibility: document.querySelector("#product-compatibility").value.trim() || null,
-      price_ngn: document.querySelector("#product-price").value === "" ? null : Number(document.querySelector("#product-price").value),
+      price_ngn: document.querySelector("#product-price").value || null,
       stock_quantity: Number(document.querySelector("#product-stock").value),
+      brand: document.querySelector("#product-brand").value.trim(),
+      compatibility: document.querySelector("#product-compatibility").value.trim(),
       is_available: document.querySelector("#product-available").checked,
       is_published: document.querySelector("#product-published").checked,
-      image_url: file ? await readImage(file) : currentImageUrl,
-      created_at: existing?.created_at || new Date().toISOString()
+      image_url: uploaded?.imageUrl || currentImageUrl
     };
-    if (id) inventory = inventory.map(item => item.id === id ? product : item);
-    else inventory.unshift(product);
+    await api(id ? `/api/admin/products/${encodeURIComponent(id)}` : "/api/admin/products", {
+      method: id ? "PATCH" : "POST", body: product
+    });
+    if (uploaded && currentImageUrl.startsWith("/api/images/")) {
+      const oldKey = currentImageUrl.slice("/api/images/".length);
+      await api(`/api/admin/images/${oldKey.split("/").map(encodeURIComponent).join("/")}`, { method: "DELETE" }).catch(() => {});
+    }
     clearForm();
+    inventory = await api("/api/admin/products");
     drawInventory();
-    showMessage("Saved to this tab’s draft. Download catalog.json when you’re ready to publish.");
+    showMessage("Product saved. The live catalog is updated.");
   } catch (error) {
-    showMessage(error.message || "Could not save the product draft.", "error");
+    if (uploaded?.key) {
+      const encodedKey = uploaded.key.split("/").map(encodeURIComponent).join("/");
+      await api(`/api/admin/images/${encodedKey}`, { method: "DELETE" }).catch(() => {});
+    }
+    showMessage(error.message, "error");
   } finally {
     saveButton.disabled = false;
-    saveButton.textContent = "Save to draft ↗";
+    saveButton.textContent = "Save product ↗";
   }
 });
 
-inventoryList.addEventListener("click", event => {
+inventoryList.addEventListener("click", async event => {
   const button = event.target.closest("button[data-action]");
   if (!button) return;
   const product = inventory.find(item => item.id === button.dataset.id);
@@ -193,10 +230,18 @@ inventoryList.addEventListener("click", event => {
     editProduct(product);
     return;
   }
-  const published = product.is_published !== false && product.is_published !== 0;
-  product.is_published = !published;
-  drawInventory();
-  showMessage(published ? "Product hidden in this draft." : "Product shown in this draft.");
+  button.disabled = true;
+  try {
+    await api(`/api/admin/products/${encodeURIComponent(product.id)}`, {
+      method: "PATCH", body: { ...product, is_published: !product.is_published }
+    });
+    inventory = await api("/api/admin/products");
+    drawInventory();
+    showMessage(product.is_published ? "Product hidden from the public catalog." : "Product shown in the public catalog.");
+  } catch (error) {
+    button.disabled = false;
+    showMessage(error.message, "error");
+  }
 });
 
 imageInput.addEventListener("change", () => {
@@ -207,6 +252,11 @@ imageInput.addEventListener("change", () => {
   showImagePreview(selectedPreviewUrl, file.name);
 });
 document.querySelector("#cancel-edit").addEventListener("click", clearForm);
-document.querySelector("#export-button").addEventListener("click", exportCatalog);
-document.querySelector("#reload-button").addEventListener("click", () => loadCatalog(true));
-loadCatalog(false);
+logoutButton.addEventListener("click", async () => {
+  try { await api("/api/admin/logout", { method: "POST" }); } catch {}
+  inventory = [];
+  clearForm();
+  clearSession();
+  showMessage("You are signed out.");
+});
+openAdmin();

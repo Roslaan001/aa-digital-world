@@ -3,3 +3,5 @@
 assets/*.jpeg
 WhatsApp Unknown *.zip
 worker/node_modules/
+.wrangler/
+.dev.vars*

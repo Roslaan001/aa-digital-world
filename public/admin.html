@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#10130f">
   <meta name="robots" content="noindex, nofollow">
-  <title>Catalog editor — AA Digital World</title>
+  <title>Catalog admin — AA Digital World</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -14,16 +14,24 @@
 <body>
   <header class="admin-header">
     <a class="brand" href="index.html" aria-label="AA Digital World storefront"><span class="brand-mark">AA<span>.</span></span><span class="brand-name">DIGITAL<br>WORLD</span></a>
-    <div class="header-actions"><a href="index.html">View storefront ↗</a><a href="admin-setup.html">How publishing works</a></div>
+    <div class="header-actions"><a href="index.html">View storefront ↗</a><button id="logout-button" class="quiet-button" type="button" hidden>Sign out</button></div>
   </header>
 
   <main class="admin-main">
-    <div class="page-intro"><div class="eyebrow"><span></span> STATIC CATALOG EDITOR</div><h1>Update your <em>catalog.</em></h1><p>Add items and photos, then download the catalog file and publish it to GitHub Pages.</p></div>
+    <div class="page-intro"><div class="eyebrow"><span></span> STORE MANAGEMENT</div><h1>Your <em>catalog.</em></h1><p>Add products, update availability and upload product photos. Changes appear in the public catalog after saving.</p></div>
 
-    <section class="notice notice-warm static-note"><strong>This editor prepares a catalog file.</strong><p>GitHub Pages cannot save uploads from this page. Export the updated <code>catalog.json</code> and replace <code>public/catalog.json</code> in the repository to publish your changes. New photos are embedded in that file. This page has no private login.</p><a href="admin-setup.html">See the publishing steps ↗</a></section>
     <div id="status-message" class="notice" role="status" aria-live="polite" hidden></div>
 
-    <section class="admin-layout">
+    <section id="login-panel" class="panel login-panel">
+      <div><div class="eyebrow"><span></span> ADMIN ACCESS</div><h2>Welcome back.</h2><p>Sign in with your AA Digital World admin account.</p></div>
+      <form id="login-form" class="form-grid">
+        <label>Email address<input id="login-email" type="email" autocomplete="username" required></label>
+        <label>Password<input id="login-password" type="password" autocomplete="current-password" required></label>
+        <button class="button button-primary" type="submit">Sign in <span>↗</span></button>
+      </form>
+    </section>
+
+    <section id="admin-panel" class="admin-layout" hidden>
       <form id="product-form" class="panel product-form">
         <div class="form-heading"><div><div class="eyebrow"><span></span> PRODUCT DETAILS</div><h2 id="form-title">Add a product</h2></div><button id="cancel-edit" class="quiet-button" type="button" hidden>Cancel edit</button></div>
         <input id="product-id" type="hidden">
@@ -36,7 +44,7 @@
           <label>Brand<input id="product-brand" maxlength="60" placeholder="Optional"></label>
           <label>Compatible with<input id="product-compatibility" maxlength="100" placeholder="Optional device/model"></label>
           <label>SKU / item code<input id="product-sku" maxlength="50" placeholder="Optional"></label>
-          <label class="wide">Product photo<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 2 MB. New photos are stored inside the exported catalog file.</small></label>
+          <label class="wide">Product photo<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 5 MB. Photos upload securely to the store.</small></label>
           <div class="image-preview wide" id="image-preview" hidden><img id="preview-image" alt="Selected product preview"><span id="preview-name"></span></div>
           <label class="check-row"><input id="product-available" type="checkbox" checked> Available to order</label>
           <label class="check-row"><input id="product-published" type="checkbox" checked> Show in public catalog</label>
@@ -45,9 +53,8 @@
       </form>
 
       <section class="panel inventory-panel" aria-labelledby="inventory-title">
-        <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> CATALOG DRAFT</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
-        <p class="inventory-help">Edits stay in this tab until you download the catalog. Download and commit it before closing or reloading this page.</p>
-        <div class="inventory-tools"><button id="export-button" class="button button-primary" type="button">Download catalog.json <span>↓</span></button><button id="reload-button" class="quiet-button" type="button">Reload published catalog</button></div>
+        <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> LIVE INVENTORY</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
+        <p class="inventory-help">Changes are saved to the live catalog when you save each product.</p>
         <div id="inventory-list" class="inventory-list"></div>
         <p id="inventory-empty" class="empty-list" hidden>No products yet. Add the first item using the form.</p>
       </section>

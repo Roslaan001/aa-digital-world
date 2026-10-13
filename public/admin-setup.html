@@ -2,24 +2,21 @@
 <html lang="en">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
-  <meta name="robots" content="noindex, nofollow"><title>Publish catalog updates — AA Digital World</title>
+  <meta name="robots" content="noindex, nofollow"><title>Admin setup — AA Digital World</title>
   <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet"><link rel="stylesheet" href="admin.css">
 </head>
 <body>
-  <header class="admin-header"><a class="brand" href="index.html"><span class="brand-mark">AA<span>.</span></span><span class="brand-name">DIGITAL<br>WORLD</span></a><div class="header-actions"><a href="admin.html">Catalog editor ↗</a><a href="index.html">View storefront</a></div></header>
+  <header class="admin-header"><a class="brand" href="index.html"><span class="brand-mark">AA<span>.</span></span><span class="brand-name">DIGITAL<br>WORLD</span></a><div class="header-actions"><a href="admin.html">Catalog admin ↗</a><a href="index.html">View storefront</a></div></header>
   <main class="admin-main setup-main">
-    <div class="page-intro"><div class="eyebrow"><span></span> PUBLISHING GUIDE</div><h1>Publish catalog <em>updates.</em></h1><p>The shop is a static GitHub Pages site. The editor creates a catalog file; committing that file publishes the changes.</p></div>
+    <div class="page-intro"><div class="eyebrow"><span></span> CLOUDFLARE PAGES</div><h1>Manage your <em>shop.</em></h1><p>The storefront and admin run on Cloudflare Pages. Pages Functions handle sign-in and catalog updates, while R2 stores the product photos and catalog data.</p></div>
     <section class="panel setup-steps">
-      <h2>1. Edit products</h2><p>Open <a href="admin.html">the catalog editor ↗</a>, add or edit items, choose photos and set availability. Photos are included in the exported JSON file. Keep each photo at or below 2 MB.</p>
-      <h2>2. Download the catalog</h2><p>Select <strong>Download catalog.json</strong>. The editor works on a draft in this browser tab; download before you reload or close it.</p>
-      <h2>3. Replace the site catalog</h2><p>On a computer with the website repository cloned, copy the downloaded file over <code>public/catalog.json</code>. From the repository folder run:</p>
-      <pre>git add public/catalog.json
-git commit -m "Update product catalog"
-git push origin HEAD:master</pre>
-      <p>The GitHub Actions workflow publishes the new catalog and storefront. The products become visible after Pages finishes deploying.</p>
-      <div class="notice notice-warm setup-warning"><strong>Static hosting limits</strong><p>This editor has no sign-in and cannot write to GitHub by itself. The username and password you suggested are not included in the public site. Only a GitHub commit updates the live catalog.</p></div>
-      <a class="button button-primary" href="admin.html">Open catalog editor <span>↗</span></a>
+      <h2>1. Connect the repository</h2><p>In Cloudflare, open <strong>Workers & Pages → Create application → Pages → Connect to Git</strong> and select the AA Digital World repository. Use <code>master</code> as the production branch and <code>public</code> as the build output directory. Leave the build command empty.</p>
+      <h2>2. Add the R2 bucket</h2><p>Create an R2 bucket named <code>aa-digital-world-product-images</code>. The repository's <code>wrangler.toml</code> config binds it to the Pages Functions as <code>PRODUCT_IMAGES</code>. If you manage bindings in the dashboard instead, use that same variable name and bucket.</p>
+      <h2>3. Add private login secrets</h2><p>Under <strong>Settings → Variables and Secrets</strong>, add encrypted secrets named <code>ADMIN_EMAIL</code>, <code>ADMIN_PASSWORD</code>, and <code>SESSION_SECRET</code>. The session secret should be a long random value. Redeploy after adding the binding and secrets.</p>
+      <h2>4. Manage products</h2><p>Open <a href="admin.html">the catalog admin ↗</a>, sign in, and add or edit products. Saving updates the live catalog. Product images are stored in R2.</p>
+      <div class="notice notice-warm setup-warning"><strong>Keep the password private</strong><p>The username, password, and session secret belong in Cloudflare's encrypted project secrets. Never add them to the source files.</p></div>
+      <a class="button button-primary" href="admin.html">Open catalog admin <span>↗</span></a>
     </section>
   </main>
   <footer><span>AA Digital World · Publishing guide</span><a href="https://wa.me/2348025816245">Store WhatsApp ↗</a></footer>

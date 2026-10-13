@@ -67,7 +67,8 @@ render();
 
 async function loadCatalog() {
   try {
-    const response = await fetch("catalog.json", { headers: { Accept: "application/json" }, cache: "no-store" });
+    let response = await fetch("/api/products", { headers: { Accept: "application/json" }, cache: "no-store" });
+    if (!response.ok) response = await fetch("catalog.json", { headers: { Accept: "application/json" }, cache: "no-store" });
     if (!response.ok) throw new Error("Catalog file is not available.");
     const data = await response.json();
     if (!Array.isArray(data)) throw new Error("Catalog file is invalid.");
