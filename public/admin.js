@@ -209,10 +209,49 @@ function drawInventory() {
     name.textContent = product.name;
     const info = document.createElement("small");
     const published = Boolean(product.is_published);
-    const stock = product.stock_quantity == null ? "Stock not tracked" : product.stock_quantity > 0 ? `${product.stock_quantity} in stock` : "Out of stock";
     const availability = product.is_available === false ? "Unavailable" : "Available";
-    info.textContent = `${categoryLabel(product)} · ${displayPrice(product.price_ngn)} · ${stock} · ${availability} · ${published ? "Published" : "Hidden"}`;
-    copy.append(name, info);
+    info.textContent = `${categoryLabel(product)} · ${displayPrice(product.price_ngn)} · ${availability} · ${published ? "Published" : "Hidden"}`;
+
+    const stockRow = document.createElement("div");
+    stockRow.className = "inventory-stock-row";
+    const stockControls = document.createElement("div");
+    stockControls.className = "inventory-stock-controls";
+
+    const isUntracked = product.stock_quantity == null;
+    const isOut = !isUntracked && Number(product.stock_quantity) <= 0;
+    const currentQty = isUntracked ? null : Number(product.stock_quantity);
+
+    const decBtn = document.createElement("button");
+    decBtn.type = "button";
+    decBtn.className = "stock-btn";
+    decBtn.textContent = "−";
+    decBtn.title = isUntracked ? "Track stock and set to 0" : "Decrease stock by 1";
+    decBtn.dataset.action = "stock-dec";
+    decBtn.dataset.id = product.id;
+
+    const badge = document.createElement("span");
+    badge.className = `stock-badge ${isUntracked ? "untracked" : isOut ? "out-of-stock" : "in-stock"}`;
+    badge.textContent = isUntracked ? "Stock untracked" : isOut ? "Out of stock (0)" : `${currentQty} in stock`;
+
+    const incBtn = document.createElement("button");
+    incBtn.type = "button";
+    incBtn.className = "stock-btn";
+    incBtn.textContent = "+";
+    incBtn.title = isUntracked ? "Track stock and set to 1" : "Increase stock by 1";
+    incBtn.dataset.action = "stock-inc";
+    incBtn.dataset.id = product.id;
+
+    const setBtn = document.createElement("button");
+    setBtn.type = "button";
+    setBtn.className = "stock-btn set-btn";
+    setBtn.textContent = "Set";
+    setBtn.title = "Set exact stock quantity";
+    setBtn.dataset.action = "stock-set";
+    setBtn.dataset.id = product.id;
+
+    stockControls.append(decBtn, badge, incBtn, setBtn);
+    stockRow.append(stockControls);
+    copy.append(name, info, stockRow);
     const actions = document.createElement("div");
     actions.className = "inventory-actions";
     const edit = document.createElement("button");
@@ -523,6 +562,52 @@ inventoryList.addEventListener("click", async event => {
   if (!button) return;
   const product = inventory.find(item => item.id === button.dataset.id);
   if (!product) return;
+
+  if (button.dataset.action === "stock-dec" || button.dataset.action === "stock-inc" || button.dataset.action === "stock-set") {
+    let nextStock = product.stock_quantity == null ? null : Number(product.stock_quantity);
+    if (button.dataset.action === "stock-dec") {
+      if (nextStock == null) nextStock = 0;
+      else if (nextStock > 0) nextStock -= 1;
+      else {
+        showMessage(`“${product.name}” is already out of stock.`);
+        return;
+      }
+    } else if (button.dataset.action === "stock-inc") {
+      if (nextStock == null) nextStock = 1;
+      else nextStock += 1;
+    } else if (button.dataset.action === "stock-set") {
+      const input = window.prompt(`Enter stock quantity for “${product.name}”\n(Leave blank if not tracking quantity):`, nextStock ?? "");
+      if (input === null) return;
+      const trimmed = input.trim();
+      if (trimmed === "") {
+        nextStock = null;
+      } else {
+        const parsed = Number(trimmed);
+        if (!Number.isInteger(parsed) || parsed < 0) {
+          showMessage("Enter a whole number of 0 or more.", "error");
+          return;
+        }
+        nextStock = parsed;
+      }
+    }
+
+    button.disabled = true;
+    try {
+      await api(`/api/admin/products/${encodeURIComponent(product.id)}`, {
+        method: "PATCH",
+        body: { ...product, stock_quantity: nextStock }
+      });
+      product.stock_quantity = nextStock;
+      drawInventory();
+      const stockMsg = nextStock == null ? "Stock is no longer tracked." : nextStock === 0 ? "Marked as out of stock." : `Stock updated to ${nextStock}.`;
+      showMessage(`“${product.name}”: ${stockMsg}`);
+    } catch (error) {
+      button.disabled = false;
+      showMessage(error.message, "error");
+    }
+    return;
+  }
+
   if (button.dataset.action === "edit") {
     editProduct(product);
     return;
@@ -677,6 +762,32 @@ if (categoryForm) {
 document.querySelector("#inventory-filter")?.addEventListener("change", event => {
   selectedInventoryCategory = event.target.value;
   drawInventory();
+});
+
+document.querySelector("#form-stock-dec")?.addEventListener("click", () => {
+  const input = document.querySelector("#product-stock");
+  const current = input.value === "" ? 0 : Number(input.value);
+  input.value = Math.max(0, current - 1);
+});
+
+document.querySelector("#form-stock-inc")?.addEventListener("click", () => {
+  const input = document.querySelector("#product-stock");
+  const current = input.value === "" ? 0 : Number(input.value);
+  input.value = current + 1;
+});
+
+document.querySelectorAll(".stock-preset-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    const input = document.querySelector("#product-stock");
+    const preset = btn.dataset.preset;
+    if (preset === "0") {
+      input.value = "0";
+    } else if (preset.startsWith("+")) {
+      const add = Number(preset.slice(1));
+      const current = input.value === "" ? 0 : Number(input.value);
+      input.value = current + add;
+    }
+  });
 });
 
 logoutButton.addEventListener("click", async () => {

@@ -55,6 +55,24 @@ footer{font-size:12px}
 .gallery-action-btn:hover{background:#f0f1ec}
 .gallery-action-btn.delete-btn{color:#ba2d10}
 .gallery-action-btn.delete-btn:hover{background:#fde8e3}
+.stock-input-stepper{display:flex;align-items:stretch;gap:0}
+.stock-input-stepper input{text-align:center;border-radius:0!important}
+.stock-step-btn{background:#f0f1ec;border:1px solid #dfe2d8;color:#2c3029;font:700 16px "DM Sans",sans-serif;padding:0 14px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background-color .15s}
+.stock-step-btn:hover{background:#e2e5dc}
+.stock-step-btn:first-child{border-radius:4px 0 0 4px;border-right:none}
+.stock-step-btn:last-child{border-radius:0 4px 4px 0;border-left:none}
+.stock-quick-presets{display:flex;gap:6px;flex-wrap:wrap;margin-top:4px}
+.stock-preset-btn{background:#f0f1ec;border:1px solid #dfe2d8;border-radius:3px;font-size:11px;font-weight:600;color:#555a4e;padding:4px 8px;cursor:pointer;transition:all .15s}
+.stock-preset-btn:hover{background:#d7fb54;color:#171a15;border-color:#b8de28}
+.inventory-stock-row{display:flex;align-items:center;gap:6px;margin-top:6px}
+.inventory-stock-controls{display:inline-flex;align-items:center;gap:4px;background:#f5f6f1;border:1px solid #e2e4dc;border-radius:4px;padding:2px 4px}
+.stock-btn{border:none;background:#e5e7de;color:#171a15;font:700 13px "DM Sans",sans-serif;width:24px;height:24px;border-radius:3px;cursor:pointer;display:inline-flex;align-items:center;justify-content:center;transition:all .15s}
+.stock-btn:hover{background:#d7fb54;color:#10130f}
+.stock-btn.set-btn{width:auto;padding:0 7px;font-size:11px;font-weight:600}
+.stock-badge{font-size:11px;font-weight:700;padding:2px 6px;border-radius:3px}
+.stock-badge.in-stock{background:#edf8d7;color:#3f5a11}
+.stock-badge.out-of-stock{background:#fee9e4;color:#9b2711}
+.stock-badge.untracked{background:#edf0eb;color:#6b7066}
 @media(max-width:560px){
   .header-actions{font-size:12px}
   .page-intro p,.inventory-help{font-size:14px}

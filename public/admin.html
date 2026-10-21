@@ -49,7 +49,20 @@
           </label>
           <label class="wide">Description<textarea id="product-detail" maxlength="180" rows="3" placeholder="A short description customers will see" required></textarea></label>
           <label>Price (₦)<input id="product-price" type="number" min="0" step="50" placeholder="Optional; blank hides the price"></label>
-          <label>Stock quantity<input id="product-stock" type="number" min="0" step="1" placeholder="Optional; blank if not tracked"><small>Use 0 when sold out. Leave blank if you are not tracking quantity.</small></label>
+          <label>Stock quantity
+            <div class="stock-input-stepper">
+              <button type="button" id="form-stock-dec" class="stock-step-btn" title="Decrease stock by 1">−</button>
+              <input id="product-stock" type="number" min="0" step="1" placeholder="Optional; blank if not tracked">
+              <button type="button" id="form-stock-inc" class="stock-step-btn" title="Increase stock by 1">+</button>
+            </div>
+            <div class="stock-quick-presets">
+              <button type="button" class="stock-preset-btn" data-preset="0">Sold out (0)</button>
+              <button type="button" class="stock-preset-btn" data-preset="+1">+1</button>
+              <button type="button" class="stock-preset-btn" data-preset="+5">+5</button>
+              <button type="button" class="stock-preset-btn" data-preset="+10">+10</button>
+            </div>
+            <small>Use 0 when sold out. Leave blank if not tracking quantity.</small>
+          </label>
           <label>Brand<input id="product-brand" maxlength="60" placeholder="Optional"></label>
           <label>Compatible with<input id="product-compatibility" maxlength="100" placeholder="Optional device/model"></label>
           <label>SKU / item code<input id="product-sku" maxlength="50" placeholder="Optional"></label>
