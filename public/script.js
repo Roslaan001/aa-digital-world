@@ -21,7 +21,7 @@ function productPrice(value) {
 }
 
 function categoryName(value) {
-  return ({ charging: "Charging", cables: "Cables", accessories: "Accessories" })[value]
+  return ({ charging: "Charging", cables: "Cables", accessories: "Accessories", gadgets: "Gadgets" })[value]
     || String(value || "Other").replace(/-/g, " ").replace(/\b\w/g, character => character.toUpperCase());
 }
 
@@ -78,10 +78,16 @@ function render() {
       : !available ? '<p class="product-status is-unavailable">Currently unavailable</p>' : "";
     const price = productPrice(product.price_ngn);
     const link = whatsappUrl(product.name, !available);
-    const tag = escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories"}[product.category] || categoryName(product.category)));
+    const tag = escapeHtml(product.tag || ({charging:"Charging",cables:"Cables",accessories:"Accessories",gadgets:"Gadgets"}[product.category] || categoryName(product.category)));
+    const images = Array.isArray(product.images) && product.images.length
+      ? product.images
+      : (product.image_url ? [product.image_url] : []);
+    const coverImage = images[0] || product.image_url;
     const mediaMarkup = product.video_url
-      ? `<div class="product-image product-video-frame"><video class="product-video" controls playsinline preload="metadata" poster="${escapeHtml(product.image_url)}" aria-label="Video of ${escapeHtml(product.name)}"><source src="${escapeHtml(product.video_url)}" type="${product.video_url.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4"}"></video><span class="product-tag">${tag}</span></div>`
-      : `<a class="product-image" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp"><img src="${escapeHtml(product.image_url)}" alt="${escapeHtml(product.name)}" loading="lazy"><span class="product-tag">${tag}</span><span class="product-arrow" aria-hidden="true">↗</span></a>`;
+      ? `<div class="product-image product-video-frame"><video class="product-video" controls playsinline preload="metadata" poster="${escapeHtml(coverImage)}" aria-label="Video of ${escapeHtml(product.name)}"><source src="${escapeHtml(product.video_url)}" type="${product.video_url.toLowerCase().endsWith(".webm") ? "video/webm" : "video/mp4"}"></video><span class="product-tag">${tag}</span></div>`
+      : images.length > 1
+      ? `<div class="product-image product-gallery" data-index="0"><a class="product-gallery-link" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp">${images.map((imgUrl, i) => `<img src="${escapeHtml(imgUrl)}" alt="${escapeHtml(product.name)}" loading="lazy" class="gallery-slide${i === 0 ? " is-active" : ""}">`).join("")}<span class="product-tag">${tag}</span><span class="product-arrow" aria-hidden="true">↗</span></a><div class="product-gallery-dots">${images.map((_, i) => `<button type="button" class="gallery-dot${i === 0 ? " is-active" : ""}" data-slide="${i}" aria-label="Photo ${i + 1}"></button>`).join("")}</div><button type="button" class="gallery-nav-btn prev-btn" aria-label="Previous photo">‹</button><button type="button" class="gallery-nav-btn next-btn" aria-label="Next photo">›</button></div>`
+      : `<a class="product-image" href="${link}" target="_blank" rel="noopener" aria-label="Ask about ${escapeHtml(product.name)} on WhatsApp"><img src="${escapeHtml(coverImage)}" alt="${escapeHtml(product.name)}" loading="lazy"><span class="product-tag">${tag}</span><span class="product-arrow" aria-hidden="true">↗</span></a>`;
     return `
     <article class="product-card" style="animation-delay:${Math.min(index * 35, 210)}ms">
       ${mediaMarkup}
@@ -98,6 +104,32 @@ document.querySelector(".filters").addEventListener("click", event => {
   render();
 });
 search.addEventListener("input", render);
+grid.addEventListener("click", event => {
+  const dot = event.target.closest(".gallery-dot");
+  const navBtn = event.target.closest(".gallery-nav-btn");
+  if (!dot && !navBtn) return;
+  event.preventDefault();
+  event.stopPropagation();
+
+  const gallery = event.target.closest(".product-gallery");
+  if (!gallery) return;
+  const slides = Array.from(gallery.querySelectorAll(".gallery-slide"));
+  const dots = Array.from(gallery.querySelectorAll(".gallery-dot"));
+  if (!slides.length) return;
+
+  let currentIndex = Number(gallery.dataset.index || 0);
+  if (dot) {
+    currentIndex = Number(dot.dataset.slide);
+  } else if (navBtn.classList.contains("prev-btn")) {
+    currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+  } else if (navBtn.classList.contains("next-btn")) {
+    currentIndex = (currentIndex + 1) % slides.length;
+  }
+
+  gallery.dataset.index = currentIndex;
+  slides.forEach((slide, i) => slide.classList.toggle("is-active", i === currentIndex));
+  dots.forEach((d, i) => d.classList.toggle("is-active", i === currentIndex));
+});
 document.addEventListener("keydown", event => {
   if (event.key === "/" && !["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
     event.preventDefault(); search.focus();

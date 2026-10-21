@@ -37,15 +37,30 @@
         <input id="product-id" type="hidden">
         <div class="form-grid two-col">
           <label>Product name<input id="product-name" maxlength="90" placeholder="e.g. 20W USB-C charger" required></label>
-          <label>Category<input id="product-category" list="category-options" maxlength="40" placeholder="e.g. Phone cases" required><datalist id="category-options"><option value="Charging"><option value="Cables"><option value="Accessories"></datalist></label>
+          <label>Category
+            <input id="product-category" list="category-options" maxlength="40" placeholder="Type or select a category" required>
+            <datalist id="category-options">
+              <option value="Charging">
+              <option value="Cables">
+              <option value="Accessories">
+              <option value="Gadgets">
+            </datalist>
+            <small>Pick from the list or type your own custom category.</small>
+          </label>
           <label class="wide">Description<textarea id="product-detail" maxlength="180" rows="3" placeholder="A short description customers will see" required></textarea></label>
           <label>Price (₦)<input id="product-price" type="number" min="0" step="50" placeholder="Optional; blank hides the price"></label>
           <label>Stock quantity<input id="product-stock" type="number" min="0" step="1" placeholder="Optional; blank if not tracked"><small>Use 0 when sold out. Leave blank if you are not tracking quantity.</small></label>
           <label>Brand<input id="product-brand" maxlength="60" placeholder="Optional"></label>
           <label>Compatible with<input id="product-compatibility" maxlength="100" placeholder="Optional device/model"></label>
           <label>SKU / item code<input id="product-sku" maxlength="50" placeholder="Optional"></label>
-          <label class="wide">Product photo<input id="product-image" type="file" accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 5 MB. Photos upload securely to the store.</small></label>
-          <div class="image-preview wide" id="image-preview" hidden><img id="preview-image" alt="Selected product preview"><span id="preview-name"></span></div>
+          <label class="wide">Product photos<input id="product-image" type="file" multiple accept="image/jpeg,image/png,image/webp"><small>JPG, PNG or WebP, up to 5 MB each. You can select multiple photos; the first photo is the main cover.</small></label>
+          <div class="image-gallery-preview wide" id="image-preview" hidden>
+            <div class="gallery-header">
+              <span>Product photos (<strong id="photo-count">0</strong>)</span>
+              <small>Click “Make cover” to choose the main photo, or remove any photo.</small>
+            </div>
+            <div class="gallery-grid" id="gallery-grid"></div>
+          </div>
           <label class="wide">Product video (optional)<input id="product-video" type="file" accept="video/mp4,video/webm"><small>MP4 or WebM, up to 25 MB. A video is shown on the product card in place of its photo.</small></label>
           <div class="video-preview wide" id="video-preview" hidden><video id="preview-video" controls playsinline preload="metadata"></video><div class="video-preview-actions"><span id="video-preview-name"></span><button id="remove-video" class="quiet-button" type="button">Remove video</button></div></div>
           <label class="check-row"><input id="product-available" type="checkbox" checked> Available to order</label>
@@ -54,13 +69,31 @@
         <button class="button button-primary save-button" id="save-button" type="submit">Save product <span>↗</span></button>
       </form>
 
-      <section class="panel inventory-panel" aria-labelledby="inventory-title">
-        <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> LIVE INVENTORY</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
-        <p class="inventory-help">Changes save to the live catalog. Download backups regularly; backup files include product data and media links, while photos and videos stay in R2.</p>
-        <div class="inventory-tools"><button id="export-catalog" class="quiet-button" type="button">Download backup</button><label class="quiet-button restore-label">Restore backup<input id="restore-catalog" type="file" accept="application/json,.json" hidden></label></div>
-        <div id="inventory-list" class="inventory-list"></div>
-        <p id="inventory-empty" class="empty-list" hidden>No products yet. Add the first item using the form.</p>
-      </section>
+      <div class="admin-column">
+        <section class="panel categories-panel" aria-labelledby="categories-title">
+          <div class="form-heading"><div><div class="eyebrow"><span></span> STORE CATEGORIES</div><h2 id="categories-title">Categories <span id="category-count">4</span></h2></div></div>
+          <p class="inventory-help">Create categories to organise your products. Type any category name below to add it, or type your own directly in the product form.</p>
+          <form id="category-form" class="category-form">
+            <input id="new-category-name" maxlength="40" placeholder="New category name (e.g. Smartwatches)" required>
+            <button class="button button-primary" id="add-category-button" type="submit">Add category <span>+</span></button>
+          </form>
+          <div id="categories-chips" class="categories-chips"></div>
+        </section>
+
+        <section class="panel inventory-panel" aria-labelledby="inventory-title">
+          <div class="form-heading inventory-heading"><div><div class="eyebrow"><span></span> LIVE INVENTORY</div><h2 id="inventory-title">Products <span id="product-count">0</span></h2></div></div>
+          <p class="inventory-help">Changes save to the live catalog. Download backups regularly; backup files include product data and media links, while photos and videos stay in R2.</p>
+          <div class="inventory-tools">
+            <select id="inventory-filter" class="quiet-button inventory-filter" aria-label="Filter inventory by category">
+              <option value="all">All categories</option>
+            </select>
+            <button id="export-catalog" class="quiet-button" type="button">Download backup</button>
+            <label class="quiet-button restore-label">Restore backup<input id="restore-catalog" type="file" accept="application/json,.json" hidden></label>
+          </div>
+          <div id="inventory-list" class="inventory-list"></div>
+          <p id="inventory-empty" class="empty-list" hidden>No products yet. Add the first item using the form.</p>
+        </section>
+      </div>
     </section>
   </main>
   <footer><span>AA Digital World · Catalog admin</span><a href="https://wa.me/2348025816245" target="_blank" rel="noopener">Store WhatsApp ↗</a></footer>

@@ -27,9 +27,38 @@
 .setup-steps p{font-size:14px}
 .setup-steps pre{font-size:13px}
 footer{font-size:12px}
+.admin-column{display:flex;flex-direction:column;gap:18px}
+.category-form{display:flex;gap:8px;margin-top:14px}
+.category-form input{flex:1;border:1px solid #dfe2d8;border-radius:4px;background:#fff;padding:10px 12px;color:#171a15;font:14px "DM Sans",sans-serif;outline:none}
+.category-form input:focus{border-color:#93aa37;box-shadow:0 0 0 3px #d7fb5438}
+.category-form .button{padding:10px 16px;white-space:nowrap;font-size:13px}
+.categories-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.category-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;border-radius:999px;background:#f0f1ec;color:#2c3029;font-size:12px;font-weight:500;border:1px solid #e1e3dc;transition:all .15s ease}
+.category-chip.is-clickable{cursor:pointer}
+.category-chip.is-clickable:hover{background:#e7e9e1;border-color:#93aa37}
+.category-chip-count{font-size:11px;color:#696e62;background:#e1e4da;padding:1px 7px;border-radius:999px;font-weight:600}
+.category-chip-delete{background:none;border:none;padding:0 2px;margin-left:2px;color:#858a7e;cursor:pointer;font-size:15px;line-height:1;border-radius:50%;display:inline-flex;align-items:center;justify-content:center}
+.category-chip-delete:hover{color:#ba2d10;background:#fde8e3}
+.inventory-filter{outline:none;border:1px solid #dfe2d8;border-radius:4px;padding:8px 10px;font:600 12px "DM Sans",sans-serif;background:#f0f1ec;color:#444940;cursor:pointer}
+.inventory-filter:focus{border-color:#93aa37}
+.image-gallery-preview{background:#f7f8f3;border:1px solid #dfe2d8;border-radius:6px;padding:14px}
+.gallery-header{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px;font-size:13px;color:#3e4239}
+.gallery-header strong{color:#171a15}
+.gallery-header small{color:#777b72;font-size:11px}
+.gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:10px}
+.gallery-item{position:relative;border:1px solid #dfe2d8;border-radius:6px;overflow:hidden;background:#fff;display:flex;flex-direction:column}
+.gallery-item.is-cover{border-color:#93aa37;box-shadow:0 0 0 2px #d7fb5470}
+.gallery-thumb{width:100%;height:84px;object-fit:cover;display:block;background:#eceee8}
+.gallery-cover-badge{position:absolute;top:5px;left:5px;background:#d7fb54;color:#171a15;font:700 9px "Manrope",sans-serif;letter-spacing:.05em;padding:2px 6px;border-radius:3px;text-transform:uppercase}
+.gallery-item-actions{display:flex;align-items:center;justify-content:space-between;padding:5px 6px;background:#fff;border-top:1px solid #f0f1ec;gap:4px}
+.gallery-action-btn{border:none;background:none;cursor:pointer;padding:3px 5px;font-size:10px;font-weight:600;border-radius:3px;color:#555a4e}
+.gallery-action-btn:hover{background:#f0f1ec}
+.gallery-action-btn.delete-btn{color:#ba2d10}
+.gallery-action-btn.delete-btn:hover{background:#fde8e3}
 @media(max-width:560px){
   .header-actions{font-size:12px}
   .page-intro p,.inventory-help{font-size:14px}
   .form-grid label{font-size:13px}
   .form-grid small{font-size:12px}
+  .category-form{flex-direction:column}
 }

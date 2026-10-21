@@ -25,6 +25,20 @@
 .product-status.is-unavailable,.product-order.is-unavailable{color:#8b4b36}
 .product-video-frame{display:block}
 .product-video{width:100%;height:100%;object-fit:cover;display:block;background:#eeece6}
+.product-gallery{position:relative}
+.product-gallery-link{display:block;width:100%;height:100%;position:relative;overflow:hidden}
+.gallery-slide{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;opacity:0;pointer-events:none;transition:opacity .25s ease;display:block}
+.gallery-slide.is-active{opacity:1;pointer-events:auto}
+.product-gallery-dots{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);display:flex;gap:5px;z-index:4;background:rgba(16,19,15,.5);padding:4px 8px;border-radius:12px;backdrop-filter:blur(4px);pointer-events:auto}
+.gallery-dot{width:6px;height:6px;border-radius:50%;background:rgba(255,255,255,.5);border:none;padding:0;cursor:pointer;transition:all .15s}
+.gallery-dot.is-active{background:var(--lime);transform:scale(1.25)}
+.gallery-nav-btn{position:absolute;top:50%;transform:translateY(-50%);width:28px;height:28px;border-radius:50%;background:rgba(16,19,15,.65);color:#fff;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;line-height:1;opacity:0;transition:opacity .2s;z-index:5}
+.gallery-nav-btn.prev-btn{left:6px}
+.gallery-nav-btn.next-btn{right:6px}
+.product-card:hover .gallery-nav-btn{opacity:1}
+@media(max-width:850px){
+  .gallery-nav-btn{opacity:.85}
+}
 .product-price,.product-order{font-size:12px}
 .catalog-bottom{font-size:12px}
 .message-banner h2{font-size:30px}

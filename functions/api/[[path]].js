@@ -7,7 +7,12 @@ const IMAGE_TYPES = new Map([
   ["image/webp", "webp"]
 ]);
 const VIDEO_TYPES = new Map([["video/mp4", "mp4"], ["video/webm", "webm"]]);
-const STANDARD_CATEGORIES = new Map([["charging", "Charging"], ["cables", "Cables"], ["accessories", "Accessories"]]);
+const STANDARD_CATEGORIES = new Map([
+  ["charging", "Charging"],
+  ["cables", "Cables"],
+  ["accessories", "Accessories"],
+  ["gadgets", "Gadgets"]
+]);
 const SESSION_COOKIE = "aa-admin-session";
 const SESSION_SECONDS = 8 * 60 * 60;
 const OLD_STARTER_PRODUCTS = new Map([
@@ -321,7 +326,17 @@ function normalizeProduct(body, imageUrl) {
   const price = body.price_ngn === "" || body.price_ngn == null ? null : Number(body.price_ngn);
   const stock = body.stock_quantity === "" || body.stock_quantity == null ? null : Number(body.stock_quantity);
   const videoUrl = body.video_url == null || body.video_url === "" ? null : String(body.video_url).trim();
-  imageUrl = typeof imageUrl === "string" ? imageUrl.trim() : imageUrl;
+
+  let images = [];
+  if (Array.isArray(body.images)) {
+    images = body.images.filter(url => typeof url === "string" && url.trim().length <= 500 && url.trim().length > 0).map(url => url.trim());
+  }
+  imageUrl = typeof imageUrl === "string" ? imageUrl.trim() : "";
+  if (imageUrl && !images.includes(imageUrl)) {
+    images.unshift(imageUrl);
+  }
+  const primaryImageUrl = images[0] || imageUrl;
+
   if (name.length < 2 || name.length > 90) throw httpError("Product name must be 2–90 characters.", 400);
   if (rawCategory.length < 2 || rawCategory.length > 40 || !category || category.length > 50) {
     throw httpError("Enter a category between 2 and 40 characters.", 400);
@@ -329,7 +344,7 @@ function normalizeProduct(body, imageUrl) {
   if (detail.length < 2 || detail.length > 180) throw httpError("Description must be 2–180 characters.", 400);
   if (price !== null && (!Number.isFinite(price) || price < 0)) throw httpError("Enter a valid price in naira.", 400);
   if (stock !== null && (!Number.isInteger(stock) || stock < 0)) throw httpError("Stock quantity must be zero or more.", 400);
-  if (!imageUrl || typeof imageUrl !== "string" || imageUrl.length > 500) throw httpError("Upload a valid product photo first.", 400);
+  if (!primaryImageUrl || primaryImageUrl.length > 500) throw httpError("Upload at least one valid product photo.", 400);
   if (videoUrl && !/^\/api\/videos\/videos\/[a-f0-9-]+\.(mp4|webm)$/i.test(videoUrl)) throw httpError("Upload a valid MP4 or WebM product video.", 400);
   return {
     name, category, category_name: categoryName, tag: String(body.tag || STANDARD_CATEGORIES.get(category) || categoryName), detail,
@@ -340,7 +355,8 @@ function normalizeProduct(body, imageUrl) {
     stock_quantity: stock,
     is_available: Boolean(body.is_available),
     is_published: Boolean(body.is_published),
-    image_url: imageUrl,
+    image_url: primaryImageUrl,
+    images: images.length ? images : [primaryImageUrl],
     video_url: videoUrl
   };
 }
@@ -365,6 +381,7 @@ async function updateProduct(request, id, context) {
   if (index < 0) return json({ error: "Product not found." }, 404);
   const values = normalizeProduct({
     ...body,
+    images: Object.hasOwn(body, "images") ? body.images : catalog[index].images,
     video_url: Object.hasOwn(body, "video_url") ? body.video_url : catalog[index].video_url
   }, body.image_url || catalog[index].image_url);
   if (values.sku && catalog.some((item, itemIndex) => itemIndex !== index && item.sku && item.sku.toLowerCase() === values.sku.toLowerCase())) {
@@ -413,19 +430,23 @@ async function deleteProduct(id, context, url) {
   const [product] = catalog.splice(index, 1);
   await saveCatalog(context.env, catalog);
 
-  let imageUrl;
-  try { imageUrl = new URL(product.image_url, url.origin); }
-  catch { imageUrl = null; }
-  const imagePrefix = "/api/images/";
-  if (imageUrl?.origin === url.origin && imageUrl.pathname.startsWith(imagePrefix)) {
-    let key;
-    try { key = imageUrl.pathname.slice(imagePrefix.length).split("/").map(decodeURIComponent).join("/"); }
-    catch { key = ""; }
-    if (/^products\/[a-f0-9-]+\.(jpg|png|webp)$/i.test(key)
-      && !catalog.some(item => item.image_url === product.image_url)) {
-      await context.env.PRODUCT_IMAGES.delete(key);
+  const productImages = Array.isArray(product.images) && product.images.length ? product.images : (product.image_url ? [product.image_url] : []);
+  for (const imgUrlStr of productImages) {
+    let imageUrl;
+    try { imageUrl = new URL(imgUrlStr, url.origin); }
+    catch { imageUrl = null; }
+    const imagePrefix = "/api/images/";
+    if (imageUrl?.origin === url.origin && imageUrl.pathname.startsWith(imagePrefix)) {
+      let key;
+      try { key = imageUrl.pathname.slice(imagePrefix.length).split("/").map(decodeURIComponent).join("/"); }
+      catch { key = ""; }
+      if (/^products\/[a-f0-9-]+\.(jpg|png|webp)$/i.test(key)
+        && !catalog.some(item => (Array.isArray(item.images) ? item.images.includes(imgUrlStr) : item.image_url === imgUrlStr))) {
+        await context.env.PRODUCT_IMAGES.delete(key);
+      }
     }
   }
+
   const videoKey = storedVideoKey(product.video_url, url.origin);
   if (videoKey && !catalog.some(item => item.video_url === product.video_url)) {
     await context.env.PRODUCT_IMAGES.delete(videoKey);
